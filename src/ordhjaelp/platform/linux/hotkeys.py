@@ -22,6 +22,7 @@ DESCRIPTIONS = {
     "laes": "Læs markeret tekst op (tryk igen for at stoppe)",
     "stop": "Stop oplæsning",
     "dikter": "Diktér: start/stop optagelse",
+    "skaerm": "Læs tekst fra skærmen (træk en firkant)",
 }
 
 

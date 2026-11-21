@@ -6,14 +6,21 @@ import logging
 import os
 import signal
 import threading
+from collections.abc import Callable
 
 from ordhjaelp import ipc
 from ordhjaelp.audio.player import Player
 from ordhjaelp.config import Config, voices_dir, whisper_dir
-from ordhjaelp.platform import get_hotkey_provider, get_selection_provider, get_text_injector
+from ordhjaelp.platform import (
+    get_hotkey_provider,
+    get_screen_capture,
+    get_selection_provider,
+    get_text_injector,
+)
 from ordhjaelp.platform.base import HotkeyProvider
 from ordhjaelp.services.dictation import DictationService
 from ordhjaelp.services.read_aloud import ReadAloudService
+from ordhjaelp.services.screen_read import ScreenReadService
 from ordhjaelp.tts.piper_engine import PiperEngine, ensure_voice
 
 log = logging.getLogger(__name__)
@@ -29,6 +36,9 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
         use_clipboard_fallback=cfg.use_clipboard_fallback,
     )
     dictation = _make_dictation(cfg, service) if cfg.dictation_enabled else None
+    screen = _make_screen_reader(service)
+    # Handlinger som kun brugerfladen kan udføre (fx vise markeringsoverlay)
+    ui_actions: dict[str, Callable[[], None]] = {}
 
     def handle(req: ipc.Request) -> ipc.Response:
         cmd = req.get("cmd")
@@ -40,6 +50,12 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
             return {"ok": service.say(str(req.get("tekst", "")))}
         if cmd == "stop":
             service.stop()
+            return {"ok": True}
+        if cmd == "skaerm":
+            action = ui_actions.get("skaerm")
+            if action is None:
+                return {"ok": False, "fejl": "Læs fra skærmen kræver ikonet ved uret"}
+            action()
             return {"ok": True}
         if cmd == "skriv":  # til fejlfinding: skriv tekst ind i det aktive program
             if dictation is None:
@@ -68,6 +84,8 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
             bindings = dict(cfg.hotkeys)
             if dictation is None:
                 bindings.pop("dikter", None)
+            if screen is None:
+                bindings.pop("skaerm", None)
             hk.start(bindings, lambda action: handle({"cmd": action}))
             hk_holder.append(hk)
             log.info("Globale genveje er aktive")
@@ -82,7 +100,7 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
         threading.Thread(target=start_hotkeys, daemon=True, name="hotkey-setup").start()
 
     try:
-        if not (tray and _run_tray(service, dictation)):
+        if not (tray and _run_tray(service, dictation, screen, ui_actions)):
             _wait_for_signal()
     finally:
         log.info("Lukker ned")
@@ -122,7 +140,27 @@ def _preload(engine) -> None:  # noqa: ANN001
         log.exception("Kunne ikke indlæse talegenkendelse")
 
 
-def _run_tray(service: ReadAloudService, dictation: DictationService | None) -> bool:
+def _make_screen_reader(service: ReadAloudService) -> ScreenReadService | None:
+    from ordhjaelp.ocr.tesseract import TesseractOCR
+
+    if not TesseractOCR.available():
+        log.warning(
+            "Læs fra skærmen kræver Tesseract: sudo dnf install tesseract tesseract-langpack-dan"
+        )
+    try:
+        capture = get_screen_capture()
+    except Exception as exc:  # noqa: BLE001
+        log.warning("Læs fra skærmen er ikke tilgængelig: %s", exc)
+        return None
+    return ScreenReadService(capture, TesseractOCR(), say=service.say, stop_reading=service.stop)
+
+
+def _run_tray(
+    service: ReadAloudService,
+    dictation: DictationService | None,
+    screen: ScreenReadService | None,
+    ui_actions: dict[str, Callable[[], None]],
+) -> bool:
     """Vis ikonet ved uret. Returnerer False, hvis det ikke kan lade sig gøre."""
     try:
         from ordhjaelp.ui.tray import TrayApp
@@ -133,7 +171,7 @@ def _run_tray(service: ReadAloudService, dictation: DictationService | None) -> 
         log.warning("Skrivebordet har ikke noget område til ikoner ved uret")
         return False
     log.info("Ordhjælp kører. Markér tekst og klik på ikonet ved uret.")
-    TrayApp(service, dictation).run()
+    TrayApp(service, dictation, screen, ui_actions).run()
     return True
 
 

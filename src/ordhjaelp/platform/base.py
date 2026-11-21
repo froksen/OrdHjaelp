@@ -42,5 +42,11 @@ class TextInjector(Protocol):
         ...
 
 
+class ScreenCapture(Protocol):
+    def capture(self) -> bytes:
+        """Tag et billede af hele skærmen og returnér det som PNG."""
+        ...
+
+
 class PlatformNotSupported(RuntimeError):
     pass

@@ -24,6 +24,7 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("stop", help="stop oplæsning")
     sub.add_parser("afslut", help="luk Ordhjælp helt")
     sub.add_parser("dikter", help="start/stop diktering")
+    sub.add_parser("skaerm", help="læs tekst fra et udsnit af skærmen")
     p_cmp = sub.add_parser("sammenlign-modeller", help="test talegenkendelse med din egen stemme")
     p_cmp.add_argument("--fil", help="brug en gemt optagelse i stedet for mikrofonen")
     p_cmp.add_argument("modeller", nargs="*", help="modeller (standard: alle)")

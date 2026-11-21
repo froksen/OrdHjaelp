@@ -11,10 +11,14 @@ Mens der læses, er ikonet rødt – klik igen (eller **Ctrl+Alt+S**) for at sto
 og tal. Klik igen, når du er færdig – teksten skrives ind, hvor markøren står.
 Første gang spørger KDE, om Ordhjælp må bruge tastaturet.
 
+**Læs fra skærmen:** Klik på det **lilla ikon** (eller **Ctrl+Alt+B**), og træk en firkant om
+tekst i et billede, en PDF eller et spil. Teksten læses op. Esc fortryder.
+
 ## Kom i gang (Fedora/KDE)
 
 ```bash
-sudo dnf install wl-clipboard portaudio      # markeret tekst + lyd
+sudo dnf install wl-clipboard portaudio \
+    tesseract tesseract-langpack-dan         # markeret tekst, lyd, tekstgenkendelse
 pip install --user uv                        # projektværktøj
 cd ~/Udvikling/LST
 uv sync                                      # installerer afhængigheder
@@ -33,6 +37,7 @@ Stemmen (ca. 60 MB) og talegenkendelsen (ca. 250 MB) hentes automatisk første g
 | `ordhjaelp laes` | Læser markeret tekst op – eller stopper, hvis der læses |
 | `ordhjaelp stop` | Stopper oplæsning |
 | `ordhjaelp dikter` | Starter/stopper diktering |
+| `ordhjaelp skaerm` | Læs tekst fra et udsnit af skærmen |
 | `ordhjaelp sammenlign-modeller` | Optag en sætning og se, hvad hver talemodel hører |
 | `ordhjaelp sig "tekst"` | Læser en tekst op |
 | `ordhjaelp status` | Viser om tjenesten kører |
@@ -48,6 +53,7 @@ Genvejene kan også ændres i *Systemindstillinger → Tastaturgenveje*.
 src/ordhjaelp/
 ├── services/       logik, uafhængig af styresystem (fx read_aloud.py)
 ├── tts/            Piper (oplæsning)
+├── ocr/            Tesseract (tekst fra skærmen)
 ├── stt/            Whisper (diktering) – kun færdige modeller fra Hugging Face
 ├── audio/          afspilning
 ├── platform/       ALT styresystem-specifikt

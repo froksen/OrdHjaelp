@@ -7,6 +7,7 @@ import sys
 from ordhjaelp.platform.base import (
     HotkeyProvider,
     PlatformNotSupported,
+    ScreenCapture,
     SelectionProvider,
     TextInjector,
 )
@@ -36,8 +37,17 @@ def get_text_injector() -> TextInjector:
     raise PlatformNotSupported(f"Indsættelse af tekst understøttes endnu ikke på {sys.platform}")
 
 
+def get_screen_capture() -> ScreenCapture:
+    if sys.platform.startswith("linux"):
+        from ordhjaelp.platform.linux.screenshot import PortalScreenshot
+
+        return PortalScreenshot()
+    raise PlatformNotSupported(f"Skærmbilleder understøttes endnu ikke på {sys.platform}")
+
+
 __all__ = [
     "get_hotkey_provider",
+    "get_screen_capture",
     "get_selection_provider",
     "get_text_injector",
     "PlatformNotSupported",

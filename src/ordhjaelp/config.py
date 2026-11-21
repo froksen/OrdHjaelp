@@ -55,6 +55,7 @@ model = "dansk-hurtig"
 laes = "CTRL+ALT+L"
 stop = "CTRL+ALT+S"
 dikter = "CTRL+ALT+D"
+skaerm = "CTRL+ALT+B"
 """
 
 
@@ -66,7 +67,12 @@ class Config:
     dictation_enabled: bool = True
     dictation_model: str = "dansk-hurtig"
     hotkeys: dict[str, str] = field(
-        default_factory=lambda: {"laes": "CTRL+ALT+L", "stop": "CTRL+ALT+S", "dikter": "CTRL+ALT+D"}
+        default_factory=lambda: {
+            "laes": "CTRL+ALT+L",
+            "stop": "CTRL+ALT+S",
+            "dikter": "CTRL+ALT+D",
+            "skaerm": "CTRL+ALT+B",
+        }
     )
 
     @classmethod

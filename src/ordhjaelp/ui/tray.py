@@ -8,6 +8,7 @@ from __future__ import annotations
 import logging
 import signal
 import sys
+import threading
 from collections.abc import Callable
 from importlib.resources import as_file, files
 
@@ -18,6 +19,7 @@ from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 from ordhjaelp.config import APP_ID
 from ordhjaelp.services.dictation import DictationService, DictationState
 from ordhjaelp.services.read_aloud import ReadAloudService
+from ordhjaelp.services.screen_read import ScreenReadService
 
 log = logging.getLogger(__name__)
 
@@ -50,11 +52,18 @@ class _Bridge(QObject):
 
     speaking_changed = Signal(bool)
     dictation_changed = Signal(object)
+    screen_requested = Signal()
+    screenshot_ready = Signal(object)  # bytes eller None
+    screen_done = Signal()
 
 
 class TrayApp:
     def __init__(
-        self, service: ReadAloudService, dictation: DictationService | None = None
+        self,
+        service: ReadAloudService,
+        dictation: DictationService | None = None,
+        screen: ScreenReadService | None = None,
+        ui_actions: dict[str, Callable[[], None]] | None = None,
     ) -> None:
         self.app = QApplication.instance() or QApplication(sys.argv)
         self.app.setApplicationName("Ordhjælp")
@@ -106,6 +115,32 @@ class TrayApp:
             self._bridge.dictation_changed.connect(self._set_dictation_state)
             dictation.add_listener(self._bridge.dictation_changed.emit)
 
+        # Læs-fra-skærmen-ikon
+        self.screen_icon: QSystemTrayIcon | None = None
+        self._screen = screen
+        self._screen_busy = False
+        self._picker = None
+        if screen is not None:
+            self._screen_icons = {
+                False: _load_icon("ordhjaelp-screen"),
+                True: _load_icon("ordhjaelp-screen-wait"),
+            }
+            self.screen_icon = QSystemTrayIcon(self._screen_icons[False])
+            self.screen_icon.setToolTip("Læs fra skærmen – klik og træk en firkant om teksten")
+            self.screen_icon.activated.connect(self._on_screen_activated)
+            screen_menu = QMenu()
+            act_screen = QAction("Læs tekst fra skærmen", screen_menu)
+            act_screen.triggered.connect(self.start_screen_read)
+            screen_menu.addAction(act_screen)
+            self._screen_menu = screen_menu
+            self.screen_icon.setContextMenu(screen_menu)
+            self._bridge.screen_requested.connect(self.start_screen_read)
+            self._bridge.screenshot_ready.connect(self._on_screenshot)
+            self._bridge.screen_done.connect(lambda: self._set_screen_busy(False))
+            if ui_actions is not None:
+                # Genvejen kommer fra en baggrundstråd – send den via Qt-signal
+                ui_actions["skaerm"] = self._bridge.screen_requested.emit
+
     @staticmethod
     def available() -> bool:
         if QApplication.instance() is None:
@@ -116,6 +151,8 @@ class TrayApp:
         self.tray.show()
         if self.mic:
             self.mic.show()
+        if self.screen_icon:
+            self.screen_icon.show()
         # Lad Ctrl+C/SIGTERM lukke pænt: Python ser kun signaler, når den får lov at køre.
         signal.signal(signal.SIGINT, lambda *_: self.app.quit())
         signal.signal(signal.SIGTERM, lambda *_: self.app.quit())
@@ -131,6 +168,53 @@ class TrayApp:
         # Kun enkeltklik: et dobbeltklik ville ellers starte og stoppe med det samme
         if reason == QSystemTrayIcon.ActivationReason.Trigger:
             self._service.toggle()
+
+    # -- læs fra skærmen -----------------------------------------------
+    def _on_screen_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:
+        if reason == QSystemTrayIcon.ActivationReason.Trigger:
+            self.start_screen_read()
+
+    def start_screen_read(self) -> None:
+        if self._screen is None or self._screen_busy:
+            return
+        self._set_screen_busy(True)
+        screen = self._screen
+        threading.Thread(
+            target=lambda: self._bridge.screenshot_ready.emit(screen.take_screenshot()),
+            daemon=True,
+            name="screenshot",
+        ).start()
+
+    def _on_screenshot(self, png: bytes | None) -> None:
+        if png is None:
+            self._set_screen_busy(False)
+            return
+        from ordhjaelp.ui.region_picker import RegionPicker
+
+        self._picker = RegionPicker(png, self._on_region_picked, self._on_region_cancelled)
+        self._picker.show()
+
+    def _on_region_picked(self, png: bytes) -> None:
+        self._picker = None
+        screen = self._screen
+        assert screen is not None
+
+        def work() -> None:
+            try:
+                screen.read_image(png)
+            finally:
+                self._bridge.screen_done.emit()
+
+        threading.Thread(target=work, daemon=True, name="ocr").start()
+
+    def _on_region_cancelled(self) -> None:
+        self._picker = None
+        self._set_screen_busy(False)
+
+    def _set_screen_busy(self, busy: bool) -> None:
+        self._screen_busy = busy
+        if self.screen_icon:
+            self.screen_icon.setIcon(self._screen_icons[busy])
 
     def _on_mic_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:
         if reason == QSystemTrayIcon.ActivationReason.Trigger:
