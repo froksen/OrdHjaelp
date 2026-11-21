@@ -62,6 +62,8 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
             return {"ok": True}
         if cmd == "forslag":
             return {"ok": True, "forslag": prediction.suggest(str(req.get("ord", "")))}
+        if cmd == "skrevet":  # fra ordforslag: et ord og/eller en sætning er skrevet færdig
+            return {"ok": True, "laeser": _read_while_typing(cfg, service, req)}
         if cmd == "laer":
             prediction.learn(str(req.get("ord", "")))
             return {"ok": True}
@@ -170,6 +172,17 @@ def _settings_hooks(cfg: Config, tts: PiperEngine, service: ReadAloudService, re
         restart=restart,
         autostart=autostart,
     )
+
+
+def _read_while_typing(cfg: Config, service: ReadAloudService, req: ipc.Request) -> bool:
+    """Læs det netop skrevne op – hvis det er slået til i indstillingerne."""
+    sentence = str(req.get("saetning") or "")
+    word = str(req.get("ord") or "")
+    if sentence and cfg.read_sentence_on_period:
+        return service.say(sentence)
+    if word and cfg.read_word_on_space:
+        return service.say(word)
+    return False
 
 
 def _make_dictation(cfg: Config, service: ReadAloudService) -> DictationService | None:

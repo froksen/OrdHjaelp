@@ -12,6 +12,9 @@ Betjening:
   F1–F5 / klik   tag forslag nr. 1–5
   højreklik      læs forslaget op uden at vælge det
   Esc            skjul forslagene
+
+Læs mens du skriver (slås til i indstillingerne): motoren melder færdige ord
+(ved mellemrum/tegn) og sætninger (ved . ! ?) til tjenesten.
 """
 
 from __future__ import annotations
@@ -30,6 +33,8 @@ from gi.repository import GLib, IBus  # noqa: E402
 ENGINE_NAME = "ordhjaelp"
 COMPONENT_NAME = "dk.ordhjaelp.IBus"
 MOUSE_RIGHT = 3
+WORD_END = set(" ,.;:!?)\"'")
+SENTENCE_END = set(".!?")
 PAGE_SIZE = 5
 MODIFIER_KEYS = {
     IBus.KEY_Shift_L,
@@ -99,6 +104,9 @@ class OrdhjaelpEngine(IBus.Engine):
         self._word = ""
         self._candidates: list[str] = []
         self._chosen = False  # har eleven selv valgt et forslag med piletasterne?
+        # Til "læs mens du skriver": den igangværende sætning og det seneste ord
+        self._sentence = ""
+        self._pending_word: str | None = None
         self._table = IBus.LookupTable.new(PAGE_SIZE, 0, False, False)
         self._table.set_orientation(IBus.Orientation.VERTICAL)
 
@@ -120,6 +128,7 @@ class OrdhjaelpEngine(IBus.Engine):
             return True
 
         if not self._word:
+            self._track_without_word(keyval, char)
             return False
 
         if keyval == IBus.KEY_BackSpace:
@@ -149,6 +158,7 @@ class OrdhjaelpEngine(IBus.Engine):
 
         # Mellemrum, tegnsætning, Enter, piletaster …: afslut ordet og send tasten videre
         self._commit_word(self._current_candidate() if self._chosen else None)
+        self._track_without_word(keyval, char)
         return False
 
     def do_candidate_clicked(self, index: int, button: int, state: int) -> None:
@@ -164,12 +174,41 @@ class OrdhjaelpEngine(IBus.Engine):
 
     def do_focus_out(self) -> None:
         self._commit_word()
+        self._forget_sentence()
 
     def do_reset(self) -> None:
         self._commit_word()
 
     def do_disable(self) -> None:
         self._commit_word()
+
+    # Læs mens du skriver ---------------------------------------------------
+    def _track_without_word(self, keyval: int, char: str) -> None:
+        """Følg med i tegn uden for ord og meld færdige ord/sætninger til tjenesten.
+
+        Tjenesten afgør ud fra indstillingerne, om der skal læses op.
+        """
+        if keyval in (IBus.KEY_Return, IBus.KEY_KP_Enter):
+            char = " "
+        if keyval == IBus.KEY_BackSpace:
+            self._sentence = self._sentence[:-1]
+            self._pending_word = None
+            return
+        if not char or not char.isprintable():
+            # Piletaster, Home, Delete …: markøren flytter sig – start forfra
+            self._forget_sentence()
+            return
+        word, self._pending_word = self._pending_word, None
+        self._sentence += char
+        sentence = None
+        if char in SENTENCE_END:
+            sentence, self._sentence = self._sentence.strip(), ""
+        if char in WORD_END or sentence:
+            tell({"cmd": "skrevet", "ord": word, "saetning": sentence})
+
+    def _forget_sentence(self) -> None:
+        self._sentence = ""
+        self._pending_word = None
 
     # Hjælpere -------------------------------------------------------------
     def _refresh(self) -> None:
@@ -219,6 +258,8 @@ class OrdhjaelpEngine(IBus.Engine):
         self._clear()
         if word:
             self.commit_text(IBus.Text.new_from_string(word))
+            self._sentence += word
+            self._pending_word = word
             if len(word) > 1:
                 tell({"cmd": "laer", "ord": word})
 

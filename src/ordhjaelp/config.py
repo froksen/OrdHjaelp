@@ -45,6 +45,8 @@ class Config:
     voice: str = "da_DK-talesyntese-medium"
     speed: float = 1.0
     use_clipboard_fallback: bool = False
+    read_word_on_space: bool = False
+    read_sentence_on_period: bool = False
     dictation_enabled: bool = True
     dictation_model: str = "dansk-hurtig"
     prediction_enabled: bool = True
@@ -71,6 +73,8 @@ class Config:
         cfg.use_clipboard_fallback = bool(
             reading.get("brug_udklipsholder", cfg.use_clipboard_fallback)
         )
+        cfg.read_word_on_space = bool(reading.get("laes_ord_ved_mellemrum", False))
+        cfg.read_sentence_on_period = bool(reading.get("laes_saetning_ved_punktum", False))
         dictation = raw.get("diktering", {})
         cfg.dictation_enabled = bool(dictation.get("aktiv", cfg.dictation_enabled))
         cfg.dictation_model = str(dictation.get("model", cfg.dictation_model))
@@ -103,6 +107,9 @@ tempo = {round(self.speed, 2)}
 # Brug udklipsholderen (Ctrl+C), hvis der ikke er markeret noget tekst.
 # Slået fra som standard, da det kan læse gammel, kopieret tekst op.
 brug_udklipsholder = {b(self.use_clipboard_fallback)}
+# Læs mens du skriver (kræver ordforslag/IBus):
+laes_ord_ved_mellemrum = {b(self.read_word_on_space)}
+laes_saetning_ved_punktum = {b(self.read_sentence_on_period)}
 
 [diktering]
 aktiv = {b(self.dictation_enabled)}

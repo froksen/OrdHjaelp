@@ -76,4 +76,11 @@ key(IBus.KEY_space)
 # 6) Stort begyndelsesbogstav + æøå
 typ("Køben")
 key(IBus.KEY_Tab)
+# 7) læs mens du skriver: et ord og en sætning
+key(IBus.KEY_space)
+typ("Jeg")
+key(IBus.KEY_space)
+typ("leger")
+key(IBus.unicode_to_keyval("."))
+pump(30)
 print("skrevet:", committed)

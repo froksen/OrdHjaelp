@@ -112,11 +112,17 @@ class SettingsDialog(QDialog):
         layout.addWidget(box)
 
         # -- Ordforslag ---------------------------------------------------
-        box = QGroupBox("Ordforslag")
+        box = QGroupBox("Mens der skrives")
         col = QVBoxLayout(box)
         self.prediction = QCheckBox("Vis ordforslag, mens der skrives")
         self.prediction.setChecked(cfg.prediction_enabled)
         col.addWidget(self.prediction)
+        self.read_word = QCheckBox("Læs ordet op, når der trykkes mellemrum")
+        self.read_word.setChecked(cfg.read_word_on_space)
+        col.addWidget(self.read_word)
+        self.read_sentence = QCheckBox("Læs sætningen op ved punktum, ! og ?")
+        self.read_sentence.setChecked(cfg.read_sentence_on_period)
+        col.addWidget(self.read_sentence)
         note = QLabel("Kræver at IBus er valgt som indtastningsmetode (se vejledningen).")
         note.setStyleSheet("color: gray")
         col.addWidget(note)
@@ -170,6 +176,8 @@ class SettingsDialog(QDialog):
         cfg.dictation_enabled = self.dictation.isChecked()
         cfg.dictation_model = str(self.model.currentData())
         cfg.prediction_enabled = self.prediction.isChecked()
+        cfg.read_word_on_space = self.read_word.isChecked()
+        cfg.read_sentence_on_period = self.read_sentence.isChecked()
         cfg.show_icons["dikter"] = self.icon_mic.isChecked()
         cfg.show_icons["skaerm"] = self.icon_screen.isChecked()
         return cfg

@@ -49,6 +49,7 @@ def test_save_applies_live_without_restart(app, hooks) -> None:
     d.clipboard.setChecked(True)
     d.icon_screen.setChecked(False)
     d.autostart.setChecked(True)
+    d.read_sentence.setChecked(True)
     d.accept()
     saved = Config.from_toml((tmp / "config.toml").read_text())
     assert saved.speed == 0.8 and saved.use_clipboard_fallback
@@ -58,6 +59,8 @@ def test_save_applies_live_without_restart(app, hooks) -> None:
     assert h.autostart.enabled is True
     assert calls["restart"] == 0
     assert h.config.speed == 0.8  # det kørende program kender de nye værdier
+    assert h.config.read_sentence_on_period is True  # virker med det samme
+    assert saved.read_sentence_on_period and not saved.read_word_on_space
 
 
 def test_changing_model_restarts(app, hooks) -> None:

@@ -38,8 +38,11 @@ def isolated_service(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
     learned: list[str] = []
+    written: list[dict] = []
 
     def handle(req):
+        if req.get("cmd") == "skrevet":
+            written.append({"ord": req.get("ord"), "saetning": req.get("saetning")})
         if req.get("cmd") == "forslag":
             return {"ok": True, "forslag": [s.word for s in predictor.suggest(req["ord"])]}
         if req.get("cmd") == "laer":
@@ -48,7 +51,7 @@ def isolated_service(tmp_path, monkeypatch):
 
     server = ipc.Server(handle)
     server.start()
-    yield learned
+    yield learned, written
     server.close()
 
 
@@ -78,7 +81,15 @@ def test_typing_through_ibus(tmp_path, isolated_service) -> None:
             engine.terminate()
     finally:
         daemon.terminate()
-    assert "skrevet: ['sgole', 'skole', 'hvordan', 'fodboldspiller', 'hej', 'København']" in out
-    # Motoren beder tjenesten om at huske de ord, der blev skrevet
+    assert (
+        "skrevet: ['sgole', 'skole', 'hvordan', 'fodboldspiller', 'hej', 'København', "
+        "'Jeg', 'leger']" in out
+    )
     time.sleep(0.5)
-    assert "skole" in isolated_service and "København" in isolated_service
+    learned, written = isolated_service
+    # Motoren beder tjenesten om at huske de ord, der blev skrevet
+    assert "skole" in learned and "København" in learned
+    # … og melder færdige ord og sætninger (til "læs mens du skriver")
+    assert {"ord": "Jeg", "saetning": None} in written
+    last = written[-1]
+    assert last["ord"] == "leger" and last["saetning"].endswith("København Jeg leger.")
