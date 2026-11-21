@@ -116,6 +116,19 @@ def test_read_at_pointer_checkbox_saves(app, hooks) -> None:
     assert calls["restart"] == 1  # genvejene registreres ved start
 
 
+def test_pdf_ocr_applies_live(app, hooks) -> None:
+    h, calls, tmp = hooks
+    seen: list[bool] = []
+    h.set_pdf_ocr = seen.append
+    d = SettingsDialog(h)
+    assert d.pdf_ocr.isChecked() is False  # slået fra som standard
+    d.pdf_ocr.setChecked(True)
+    d.accept()
+    assert seen == [True]  # menupunktet vises med det samme
+    assert calls["restart"] == 0
+    assert Config.from_toml((tmp / "config.toml").read_text()).pdf_ocr_enabled is True
+
+
 class _ReadySetup:
     """Opsætningen til ordforslag er i orden, så statuslinjen vises."""
 
