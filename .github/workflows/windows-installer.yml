@@ -64,6 +64,21 @@ jobs:
           }
           $proc = Start-Process $exe -ArgumentList "--help" -PassThru -Wait
           if ($proc.ExitCode -ne 0) { throw "Ordhjaelp.exe fra zip-filen fejlede" }
+      - name: Afprøv install.ps1 (installér og afinstallér uden administrator)
+        shell: pwsh
+        run: |
+          $zip = (Get-ChildItem dist\Ordhjaelp-*-Windows.zip | Select-Object -First 1).FullName
+          $dest = Join-Path $env:RUNNER_TEMP "ps-install\Ordhjaelp"
+          # Windows PowerShell 5.1, ligesom på elevernes pc'er
+          powershell -NoProfile -ExecutionPolicy Bypass -File packaging\windows\install.ps1 -Zip $zip -Mappe $dest -IkkeStart
+          if ($LASTEXITCODE) { throw "install.ps1 fejlede" }
+          foreach ($file in "Ordhjaelp.exe", "install.ps1", "tools\hunspell\hunspell.exe") {
+            if (-not (Test-Path (Join-Path $dest $file))) { throw "$file blev ikke installeret" }
+          }
+          $run = (Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run").Ordhjaelp
+          if ($run -notlike "*Ordhjaelp.exe*start*") { throw "Autostart blev ikke slået til: $run" }
+          powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $dest "install.ps1") -Afinstaller -Mappe $dest
+          if (Test-Path $dest) { throw "Afinstallationen fjernede ikke mappen" }
       - uses: actions/upload-artifact@v4
         with:
           name: Ordhjaelp-Setup
@@ -75,13 +90,13 @@ jobs:
           path: dist/Ordhjaelp-*-Windows.zip
           if-no-files-found: error
           compression-level: 0 # er allerede pakket
-      - name: Læg installeren og zip-filen på udgivelsen
+      - name: Læg installeren, zip-filen og install.ps1 på udgivelsen
         if: startsWith(github.ref, 'refs/tags/v')
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $files = (Get-ChildItem dist\Ordhjaelp-*-Setup.exe, dist\Ordhjaelp-*-Windows.zip).FullName
+          $files = (Get-ChildItem dist\Ordhjaelp-*-Setup.exe, dist\Ordhjaelp-*-Windows.zip, packaging\windows\install.ps1).FullName
           gh release view $env:GITHUB_REF_NAME 2>$null
           if ($LASTEXITCODE) { gh release create $env:GITHUB_REF_NAME --title "Ordhjælp $env:GITHUB_REF_NAME" --generate-notes }
           gh release upload $env:GITHUB_REF_NAME @files --clobber

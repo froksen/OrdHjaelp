@@ -56,6 +56,16 @@ cp -a %{stage}/. %{buildroot}/
 /usr/bin/gtk-update-icon-cache -q %{_datadir}/icons/hicolor &>/dev/null || :
 
 %changelog
+* Sat Nov 21 2026 Ole Frandsen - 0.3.0-1
+- Windows: ordforslag og læs mens du skriver (tastaturovervågning og forslagsvindue)
+- Windows: læs ved markering og læs under musen med UI Automation
+- Windows: installer, zip-fil og install.ps1 uden administrator, med Hunspell og Tesseract
+- Det skrevne ord bliver stående blandt ordforslagene
+- Genvejene vises i menuerne, i en oversigt og i forslagsvinduet
+- Velkomstvinduet: grundindstillinger første gang
+- Vejledning i at vise ikonerne ved uret (Windows 11)
+- Indstillinger uden afklippet tekst, også på små skærme (bidrag fra qvisty)
+
 * Sat Nov 21 2026 Ole Frandsen - 0.2.0-1
 - Hjælp til opsætning af ordforslag: vejledning og statustjek i indstillingerne
 - Læs ordet/sætningen op mens du skriver virker nu også uden ordforslag
