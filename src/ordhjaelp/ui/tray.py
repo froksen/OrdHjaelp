@@ -95,6 +95,7 @@ class TrayApp:
         self._settings_dialog = None
         if settings is not None:
             settings.set_icon_visible = self.set_icon_visible
+            settings.set_icons_always_visible = self.set_icons_always_visible
             act_settings = QAction("Indstillinger …", menu)
             act_settings.triggered.connect(self.open_settings)
             menu.addAction(act_settings)
@@ -162,6 +163,10 @@ class TrayApp:
             self.mic.setVisible(icons.get("dikter", True))
         if self.screen_icon:
             self.screen_icon.setVisible(icons.get("skaerm", True))
+        if self._settings is None or self._settings.config.icons_always_visible:
+            # Windows opretter først sit valg for ikonerne, når de er vist et øjeblik
+            for delay in (2000, 10000):
+                QTimer.singleShot(delay, lambda: self.set_icons_always_visible(True))
         # Lad Ctrl+C/SIGTERM lukke pænt: Python ser kun signaler, når den får lov at køre.
         signal.signal(signal.SIGINT, lambda *_: self.app.quit())
         signal.signal(signal.SIGTERM, lambda *_: self.app.quit())
@@ -191,6 +196,11 @@ class TrayApp:
         dialog.finished.connect(lambda _: setattr(self, "_settings_dialog", None))
         self._settings_dialog = dialog
         dialog.show()
+
+    def set_icons_always_visible(self, visible: bool) -> None:
+        from ordhjaelp.platform import set_tray_icons_always_visible
+
+        set_tray_icons_always_visible(visible)
 
     def set_icon_visible(self, name: str, visible: bool) -> None:
         icon = {"dikter": self.mic, "skaerm": self.screen_icon}.get(name)

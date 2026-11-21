@@ -52,6 +52,7 @@ class SettingsHooks:
     models: ModelStore | None = None
     set_read_on_select: Callable[[bool], None] | None = None
     typing_setup: TypingSetup | None = None
+    set_icons_always_visible: Callable[[bool], None] | None = None  # sættes af brugerfladen
 
 
 def needs_restart(old: Config, new: Config) -> bool:
@@ -174,6 +175,10 @@ class SettingsDialog(QDialog):
         info = QLabel("Det blå ikon (læs op) vises altid – her ligger også denne menu.")
         info.setStyleSheet("color: gray")
         col.addWidget(info)
+        self.icons_always = QCheckBox("Vis altid ikonerne ved uret (ikke gemt under ^)")
+        self.icons_always.setChecked(cfg.icons_always_visible)
+        self.icons_always.setVisible(sys.platform == "win32")  # Windows 11 skjuler nye ikoner
+        col.addWidget(self.icons_always)
         layout.addWidget(box)
 
         self.autostart = QCheckBox("Start Ordhjælp automatisk, når der logges ind")
@@ -316,6 +321,7 @@ class SettingsDialog(QDialog):
         cfg.read_sentence_on_period = self.read_sentence.isChecked()
         cfg.show_icons["dikter"] = self.icon_mic.isChecked()
         cfg.show_icons["skaerm"] = self.icon_screen.isChecked()
+        cfg.icons_always_visible = self.icons_always.isChecked()
         return cfg
 
     def accept(self) -> None:  # noqa: D102
@@ -327,6 +333,11 @@ class SettingsDialog(QDialog):
             hooks.set_read_on_select(new.read_on_select)
         for name in ("dikter", "skaerm"):
             hooks.set_icon_visible(name, new.show_icons[name])
+        if (
+            hooks.set_icons_always_visible is not None
+            and new.icons_always_visible != self._original.icons_always_visible
+        ):
+            hooks.set_icons_always_visible(new.icons_always_visible)
         if hooks.autostart is not None and self.autostart.isEnabled():
             try:
                 hooks.autostart.set_enabled(self.autostart.isChecked())
