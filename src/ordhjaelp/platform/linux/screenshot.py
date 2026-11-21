@@ -1,6 +1,6 @@
 """Skærmbillede på Linux via xdg-desktop-portal (Screenshot).
 
-Virker på Wayland. Første gang kan KDE/GNOME spørge om lov.
+Virker på Wayland. Første gang kan KDE spørge om lov.
 Spec: https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.Screenshot.html
 """
 

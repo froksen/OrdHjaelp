@@ -1,7 +1,11 @@
 # Ordhjælp: noter til udvikling
 
-Dansk læse og skriveværktøj (LST) i Python og Qt. Kører på Linux (KDE/Wayland først)
-og Windows. Alt styresystemspecifikt ligger i `src/ordhjaelp/platform/`.
+Dansk læse og skriveværktøj (LST) i Python og Qt. Kører på **Fedora Linux med KDE Plasma
+(Wayland)** og **Windows**. GNOME og andre Linux-distributioner understøttes ikke og skal
+ikke tænkes ind. En Mac-version kan komme senere. Alt styresystemspecifikt ligger i
+`src/ordhjaelp/platform/`.
+- Windows installeres kun med installationsprogrammet (Setup.exe) eller
+  PowerShell-kommandoen (`install.ps1`, som henter zip-filen). Fedora med RPM'en.
 
 ## Arbejdsgang
 

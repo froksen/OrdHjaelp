@@ -14,7 +14,6 @@ from ordhjaelp.platform.base import (
     ScreenCapture,
     SelectionProvider,
     TextInjector,
-    TrayExtension,
     TypingSetup,
 )
 
@@ -116,15 +115,6 @@ def get_typing_setup() -> TypingSetup | None:
     return None
 
 
-def get_tray_extension() -> TrayExtension | None:
-    """Den tilføjelse, skrivebordet kræver for at vise ikoner ved uret (None = ingen)."""
-    if sys.platform.startswith("linux"):
-        from ordhjaelp.platform.linux.gnome import AppIndicatorExtension, is_gnome
-
-        return AppIndicatorExtension() if is_gnome() else None
-    return None
-
-
 def open_tray_icon_settings() -> bool:
     """Åbn Windows' indstillinger for ikonerne ved uret. False, hvor det ikke findes."""
     if sys.platform == "win32":
@@ -142,7 +132,7 @@ def move_window_to_corner(caption: str, margin: int) -> bool:
     """Flyt vinduet nederst til højre over opgavelinjen, hvor programmet ikke selv må.
 
     Bruges på Wayland, hvor Qt's move() ignoreres. Virker på KDE Plasma (KWin).
-    Returnerer False, hvor det ikke kan lade sig gøre (fx GNOME). Venter på
+    Returnerer False, hvor det ikke kan lade sig gøre. Venter på
     D-Bus, så kald den ikke fra Qt's hovedtråd.
     """
     if sys.platform.startswith("linux"):
@@ -163,7 +153,6 @@ __all__ = [
     "open_tray_icon_settings",
     "get_input_method",
     "get_typing_setup",
-    "get_tray_extension",
     "get_autostart",
     "get_hotkey_provider",
     "get_pointer_text",

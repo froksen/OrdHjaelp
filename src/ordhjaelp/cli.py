@@ -19,7 +19,11 @@ def main(argv: list[str] | None = None) -> int:
     p_start.add_argument(
         "--uden-genveje", action="store_true", help="registrér ikke globale genveje"
     )
-    p_start.add_argument("--uden-ikon", action="store_true", help="vis ikke ikonet ved uret")
+    p_start.add_argument(
+        "--uden-ikon",
+        action="store_true",
+        help="vis hverken knaplinjen eller ikoner ved uret (kun genveje)",
+    )
     sub.add_parser("laes", help="læs markeret tekst op (eller stop, hvis der læses)")
     sub.add_parser("stop", help="stop oplæsning")
     sub.add_parser("afslut", help="luk Ordhjælp helt")

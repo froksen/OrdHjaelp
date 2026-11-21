@@ -83,25 +83,6 @@ class Autostart(Protocol):
     def set_enabled(self, enabled: bool) -> None: ...
 
 
-class TrayExtension(Protocol):
-    """En tilføjelse til skrivebordet, som ikonerne ved uret kræver (fx på GNOME)."""
-
-    name: str  # tilføjelsens navn, som brugeren ser det
-    install_command: str  # kommando, der installerer den
-
-    def state(self) -> str:
-        """Tilstanden: mangler, slået fra eller slået til."""
-        ...
-
-    def enable(self) -> bool:
-        """Slå tilføjelsen til. False, hvis det ikke lykkedes."""
-        ...
-
-    def wait_until_ready(self, timeout: float) -> bool:
-        """Vent på, at ikonerne kan vises. False, hvis det ikke sker inden for tiden."""
-        ...
-
-
 class PlatformNotSupported(RuntimeError):
     pass
 

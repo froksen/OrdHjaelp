@@ -21,7 +21,6 @@ from ordhjaelp.platform import (
     get_screen_capture,
     get_selection_provider,
     get_text_injector,
-    get_tray_extension,
     get_typing_setup,
 )
 from ordhjaelp.platform.base import HotkeyProvider
@@ -129,7 +128,7 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
     hk_holder: list[HotkeyProvider] = []
 
     def start_hotkeys() -> None:
-        # Kører i egen tråd: første gang venter KDE/GNOME på, at brugeren godkender.
+        # Kører i egen tråd: første gang venter KDE på, at brugeren godkender.
         try:
             hk = get_hotkey_provider()
             bindings = dict(cfg.hotkeys)
@@ -169,9 +168,7 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
     try:
         hooks = _settings_hooks(cfg, tts, service, restart, set_read_on_select) if tray else None
         shown_keys = cfg.hotkeys if hotkeys else None  # uden genveje vises ingen i menuerne
-        shown = tray and _run_tray(
-            service, dictation, screen, ui_actions, hooks, shown_keys, restart_requested.set
-        )
+        shown = tray and _run_tray(service, dictation, screen, ui_actions, hooks, shown_keys)
         if not shown:
             _wait_for_signal()
     finally:
@@ -356,47 +353,24 @@ def _run_tray(
     ui_actions: dict[str, Callable[[], None]],
     hooks=None,  # noqa: ANN001
     hotkeys: dict[str, str] | None = None,
-    restart: Callable[[], None] | None = None,
 ) -> bool:
-    """Vis knaplinjen eller ikonerne ved uret. False, hvis det ikke kan lade sig gøre.
-
-    Mangler skrivebordet en udvidelse til ikonerne (GNOME), forklares det. Slår brugeren
-    den til, kaldes restart, og der returneres True: Ordhjælp starter forfra med ikoner.
-    """
+    """Vis knaplinjen eller ikonerne ved uret. False, hvis det ikke kan lade sig gøre."""
     try:
         from ordhjaelp.ui.tray import TrayApp
     except ImportError as exc:
         log.warning("Ikon ved uret er ikke tilgængeligt (%s)", exc)
         return False
-    from ordhjaelp.config import VIEW_TRAY
+    from ordhjaelp.config import VIEW_TOOLBAR, VIEW_TRAY
 
     wants_tray = hooks is not None and hooks.config.view == VIEW_TRAY
     if wants_tray and not TrayApp.available():  # knaplinjen har ikke brug for uret
-        log.warning("Skrivebordet har ikke noget område til ikoner ved uret")
-        return _explain_missing_tray(hotkeys, restart)
+        log.warning("Skrivebordet har ikke noget område til ikoner ved uret: bruger knaplinjen")
+        hooks.config.view = VIEW_TOOLBAR
+        wants_tray = False
     where = "ikonet ved uret" if wants_tray else "den blå knap i knaplinjen"
     log.info("Ordhjælp kører. Markér tekst og klik på %s.", where)
     TrayApp(service, dictation, screen, ui_actions, hooks, hotkeys).run()
     return True
-
-
-def _explain_missing_tray(
-    hotkeys: dict[str, str] | None, restart: Callable[[], None] | None
-) -> bool:
-    """Forklar, hvilken udvidelse der mangler. True, hvis Ordhjælp skal starte forfra."""
-    extension = get_tray_extension()
-    if extension is None:
-        return False
-    log.warning(
-        "Ikonerne ved uret kræver udvidelsen '%s' (%s)", extension.name, extension.install_command
-    )
-    from ordhjaelp.ui.tray_missing import explain_missing_tray
-
-    if explain_missing_tray(extension, hotkeys) and restart is not None:
-        log.info("Udvidelsen er slået til – starter forfra med ikoner")
-        restart()
-        return True
-    return False
 
 
 def _request_shutdown() -> None:
