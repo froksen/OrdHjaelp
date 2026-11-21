@@ -28,7 +28,7 @@ from ordhjaelp.ui.shortcuts import shortcut_for
 
 log = logging.getLogger(__name__)
 
-ICON_SIZE = 36
+ICON_SIZE = 26  # skærmpunkter; knapperne er 8 større
 DIM_OPACITY = 0.55  # gennemsigtig, når musen ikke er over linjen
 DIM_DELAY_MS = 2500
 SAVE_DELAY_MS = 500  # gem først, når eleven har sluppet linjen
@@ -168,7 +168,7 @@ class Toolbar(QWidget):
             self._more = more
             self._tail.append(more)
         self._fold = self._make_button("‹", "Fold knaplinjen ind")
-        self._fold.setFixedWidth(24)
+        self._fold.setFixedWidth(20)
         self._fold.clicked.connect(lambda: self.set_folded(not self._folded))
         self._tail.append(self._fold)
         self._app_icon = app_icon
@@ -226,7 +226,7 @@ class Toolbar(QWidget):
             self._fold.setIcon(self._app_icon)
             self._fold.setToolTip("Vis Ordhjælps knapper")
         else:
-            self._fold.setFixedWidth(24)
+            self._fold.setFixedWidth(20)
             self._fold.setIcon(QIcon())
             self._fold.setText("‹")
             self._fold.setToolTip("Fold knaplinjen ind")
@@ -295,7 +295,7 @@ class Toolbar(QWidget):
                 border: 1px solid {border.name()};
                 border-radius: 12px;
             }}
-            QToolButton {{ border: none; border-radius: 8px; font-size: 20px; }}
+            QToolButton {{ border: none; border-radius: 8px; font-size: 16px; }}
             QToolButton:hover {{ background: rgba(127, 127, 127, 50); }}
             QToolButton:pressed {{ background: rgba(127, 127, 127, 90); }}
             """
