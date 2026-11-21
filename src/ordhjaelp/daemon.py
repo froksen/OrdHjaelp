@@ -21,6 +21,7 @@ from ordhjaelp.platform import (
     get_screen_capture,
     get_selection_provider,
     get_text_injector,
+    get_tray_extension,
     get_typing_setup,
 )
 from ordhjaelp.platform.base import HotkeyProvider
@@ -168,7 +169,10 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
     try:
         hooks = _settings_hooks(cfg, tts, service, restart, set_read_on_select) if tray else None
         shown_keys = cfg.hotkeys if hotkeys else None  # uden genveje vises ingen i menuerne
-        if not (tray and _run_tray(service, dictation, screen, ui_actions, hooks, shown_keys)):
+        shown = tray and _run_tray(
+            service, dictation, screen, ui_actions, hooks, shown_keys, restart_requested.set
+        )
+        if not shown:
             _wait_for_signal()
     finally:
         log.info("Lukker ned")
@@ -352,8 +356,13 @@ def _run_tray(
     ui_actions: dict[str, Callable[[], None]],
     hooks=None,  # noqa: ANN001
     hotkeys: dict[str, str] | None = None,
+    restart: Callable[[], None] | None = None,
 ) -> bool:
-    """Vis ikonet ved uret. Returnerer False, hvis det ikke kan lade sig gøre."""
+    """Vis ikonet ved uret. Returnerer False, hvis det ikke kan lade sig gøre.
+
+    Mangler skrivebordet en udvidelse til ikonerne (GNOME), forklares det. Slår brugeren
+    den til, kaldes restart, og der returneres True: Ordhjælp starter forfra med ikoner.
+    """
     try:
         from ordhjaelp.ui.tray import TrayApp
     except ImportError as exc:
@@ -361,10 +370,29 @@ def _run_tray(
         return False
     if not TrayApp.available():
         log.warning("Skrivebordet har ikke noget område til ikoner ved uret")
-        return False
+        return _explain_missing_tray(hotkeys, restart)
     log.info("Ordhjælp kører. Markér tekst og klik på ikonet ved uret.")
     TrayApp(service, dictation, screen, ui_actions, hooks, hotkeys).run()
     return True
+
+
+def _explain_missing_tray(
+    hotkeys: dict[str, str] | None, restart: Callable[[], None] | None
+) -> bool:
+    """Forklar, hvilken udvidelse der mangler. True, hvis Ordhjælp skal starte forfra."""
+    extension = get_tray_extension()
+    if extension is None:
+        return False
+    log.warning(
+        "Ikonerne ved uret kræver udvidelsen '%s' (%s)", extension.name, extension.install_command
+    )
+    from ordhjaelp.ui.tray_missing import explain_missing_tray
+
+    if explain_missing_tray(extension, hotkeys) and restart is not None:
+        log.info("Udvidelsen er slået til – starter forfra med ikoner")
+        restart()
+        return True
+    return False
 
 
 def _request_shutdown() -> None:

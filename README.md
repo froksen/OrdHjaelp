@@ -73,7 +73,7 @@ Højreklik på det blå ikon → **Indstillinger**: taletempo (med "Prøv stemme
 læs ved markering, diktering og talemodel, ordforslag, læs mens du skriver, hvilke ikoner der vises, og
 autostart ved login. Indstillingerne gemmes i `~/.config/ordhjaelp/config.toml`.
 
-## Installation (Fedora KDE)
+## Installation (Fedora KDE og GNOME)
 
 ### Med RPM
 
@@ -120,6 +120,23 @@ Derefter:
 - **Ordforslag** kræver, at IBus er valgt som indtastningsmetode:
   *Systemindstillinger → Tastatur → Virtuelt tastatur → **IBus Wayland***.
   Ordhjælp opdager det af sig selv.
+
+### GNOME: ikonerne ved uret kræver en udvidelse
+
+GNOME viser ikke ikoner ved uret af sig selv. Ordhjælp forventer, at udvidelsen
+**AppIndicator and KStatusNotifierItem Support** er installeret og slået til.
+RPM'en trækker den ind på maskiner med GNOME. Fra kildekoden:
+
+```bash
+sudo dnf install gnome-shell-extension-appindicator
+```
+
+Log ud og ind igen. Mangler udvidelsen, eller er den slået fra, viser Ordhjælp en besked
+ved start. Er den installeret, kan den slås til med én knap i beskeden. Uden udvidelsen
+kører Ordhjælp stadig, men kun med tastaturgenvejene.
+
+Ikke alt virker endnu på GNOME: **Læs ved markering** og **Læs under musen** kræver
+foreløbig KDE Plasma.
 
 ## Installation (Windows, prøveudgave)
 
