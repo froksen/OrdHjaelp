@@ -120,14 +120,11 @@ class SettingsDialog(QDialog):
         # får Qt til at gøre vinduet for smalt, så tekst klippes eller forsvinder
         note = QLabel(
             "Peg med musen og tryk Ctrl+Alt+1 (ordet), Ctrl+Alt+2 (sætningen)\n"
-            "eller Ctrl+Alt+3 (herfra og videre). Virker fx i Firefox og LibreOffice."
+            "eller Ctrl+Alt+3 (herfra og videre). Virker fx i "
+            + ("Word, Edge og Notesblok." if sys.platform == "win32" else "Firefox og LibreOffice.")
         )
         note.setStyleSheet("color: gray")
         form.addRow(note)
-        if sys.platform == "win32":  # kræver UI Automation, som endnu ikke er lavet
-            for box_ in (self.read_on_select, self.read_at_pointer):
-                box_.setEnabled(False)
-                box_.setToolTip("Kommer senere på Windows")
         layout.addWidget(box)
 
         # -- Diktering --------------------------------------------------

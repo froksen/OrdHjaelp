@@ -44,6 +44,7 @@ WM_KEYUP = 0x0101
 WM_SYSKEYDOWN = 0x0104
 WM_SYSKEYUP = 0x0105
 WM_LBUTTONDOWN = 0x0201
+WM_LBUTTONUP = 0x0202
 WM_RBUTTONDOWN = 0x0204
 WM_MBUTTONDOWN = 0x0207
 LLKHF_INJECTED = 0x10
@@ -243,6 +244,7 @@ def user32():  # noqa: ANN201
     dll.GetWindowLongPtrW.restype = ctypes.c_ssize_t
     dll.SetWindowLongPtrW.argtypes = [wintypes.HWND, ctypes.c_int, ctypes.c_ssize_t]
     dll.SetWindowLongPtrW.restype = ctypes.c_ssize_t
+    dll.GetDoubleClickTime.restype = wintypes.UINT
     return dll
 
 

@@ -154,20 +154,21 @@ uv run ordhjaelp start
 
 | Virker på Windows | Sådan |
 |---|---|
-| Læs op | Markeret tekst kopieres med Ctrl+C, og det, der lå i udklipsholderen, lægges tilbage bagefter |
+| Læs op | Den markerede tekst hentes via UI Automation (Windows' tilgængelighed), så udklipsholderen ikke røres. Understøtter programmet ikke det, bruges Ctrl+C, og det, der lå i udklipsholderen, lægges tilbage bagefter. Aldrig Ctrl+C i terminaler |
 | Diktering | Teksten skrives ind tegn for tegn, så æ, ø og å virker på alle tastaturer |
 | Læs fra skærmen | Tesseract findes også, når det ikke ligger i PATH |
 | Genveje og autostart | Genvejene ændres under `[genveje]` i `%LOCALAPPDATA%\ordhjaelp\ordhjaelp\config.toml` |
 | Sprogmodeller | Velkomstvinduet henter stemme og talegenkendelse første gang. De kan hentes og slettes under indstillingerne |
 | Ordforslag | Forslagene vises i et lille vindue ved markøren. Vælg med F1–F5, med musen eller med ↓ ↑ og Tab. Der skal ikke sættes noget op i Windows |
 | Læs mens du skriver | Ordet læses ved mellemrum og sætningen ved punktum, ! og ? |
+| Læs ved markering | Træk med musen, dobbeltklik (et ord), trippelklik (en linje) eller Shift+piletaster, så læses det markerede op |
+| Læs under musen | Peg og tryk Ctrl+Alt+1 (ordet), Ctrl+Alt+2 (sætningen) eller Ctrl+Alt+3 (herfra). Kræver UI Automation, fx Word, Edge og Notesblok |
 
 Ordforslag virker ikke i programmer, der kører som administrator (det tillader Windows ikke).
 Nogle programmer (fx Chrome og Word) fortæller ikke, hvor markøren står. Så vises
 forslagene ved musen i stedet.
 
-Kommer senere på Windows: læs ved markering og læs under musen.
-Bemærk: udklipsholderens historik (Win+V) kan vise den tekst, der er læst op.
+Bemærk: når Ctrl+C bruges, kan udklipsholderens historik (Win+V) vise den tekst, der er læst op.
 
 ## Kommandoer
 
@@ -222,7 +223,7 @@ src/ordhjaelp/
 ├── platform/       ALT styresystem-specifikt
 │   ├── base.py     interfaces
 │   ├── linux/      Wayland/X11: xdg-desktop-portal, IBus, wl-clipboard
-│   ├── windows/    Win32 via ctypes: genveje, Ctrl+C, SendInput, tastaturovervågning
+│   ├── windows/    Win32 via ctypes: genveje, UI Automation, SendInput, tastaturovervågning
 │   └── macos/      (senere)
 ├── ipc.py          lokal forbindelse mellem kommandoer, IBus og tjenesten
 ├── daemon.py       baggrundstjenesten
@@ -273,7 +274,8 @@ Ordhjælp er under udvikling og afprøves på Fedora KDE Plasma (Wayland).
 - [x] Windows: læs op, diktering, læs fra skærmen, genveje, autostart (prøveudgave)
 - [x] Windows: sprogmodeller, ordforslag, læs mens du skriver (prøveudgave)
 - [x] Windows: installer uden administrator (prøveudgave)
-- [ ] Windows: læs ved markering, læs under musen, signeret installer
+- [x] Windows: læs ved markering, læs under musen (UI Automation, prøveudgave)
+- [ ] Windows: signeret installer
 - [ ] macOS
 
 ## Licens

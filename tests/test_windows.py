@@ -118,6 +118,11 @@ class FakeClipboard:
     def restore_focus(self) -> None:
         self.focus_restored += 1
 
+    def foreground_class(self) -> str:
+        return self.window_class
+
+    window_class = "Chrome_WidgetWin_1"
+
 
 def _copy(clip: FakeClipboard) -> str | None:
     return copy_selection(clip, timeout=0.05, sleep=lambda _s: None)
@@ -148,11 +153,34 @@ def test_shell_windows_are_ignored() -> None:
     assert not is_shell_window("Chrome_WidgetWin_1")
 
 
-def test_selection_on_change_not_supported_yet() -> None:
+def test_selection_prefers_ui_automation_and_leaves_clipboard_alone() -> None:
     from ordhjaelp.platform.windows.selection import WindowsSelection
 
-    sel = WindowsSelection(backend=FakeClipboard(None, None))
-    assert sel.on_change(lambda: None) is False
+    clip = FakeClipboard(before="elevens egen tekst", selected="via Ctrl+C")
+    sel = WindowsSelection(backend=clip, uia_selection=lambda: "  via UI Automation ")
+    assert sel.selected_text() == "via UI Automation"
+    assert clip.copies == 0
+
+
+def test_selection_falls_back_to_ctrl_c_without_ui_automation() -> None:
+    from ordhjaelp.platform.windows import selection
+
+    clip = FakeClipboard(before=None, selected="skolen")
+    sel = selection.WindowsSelection(backend=clip, uia_selection=lambda: None)
+    assert sel.selected_text() == "skolen"
+    assert clip.copies == 1
+
+
+def test_selection_never_sends_ctrl_c_to_a_terminal() -> None:
+    from ordhjaelp.platform.windows.selection import WindowsSelection, is_terminal
+
+    clip = FakeClipboard(before=None, selected="skolen")
+    clip.window_class = "CASCADIA_HOSTING_WINDOW_CLASS"  # Windows Terminal
+    sel = WindowsSelection(backend=clip, uia_selection=lambda: None)
+    assert sel.selected_text() is None
+    assert clip.copies == 0
+    assert is_terminal("ConsoleWindowClass")
+    assert not is_terminal("Notepad")
 
 
 # -- autostart ----------------------------------------------------------------

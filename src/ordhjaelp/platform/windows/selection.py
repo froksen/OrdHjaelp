@@ -1,8 +1,11 @@
 """Markeret tekst på Windows.
 
-Windows har ingen "primary selection" som Linux. Vi gør som andre LST-værktøjer:
-sender Ctrl+C til programmet, læser udklipsholderen og lægger det, eleven havde
-kopieret, tilbage bagefter.
+Først spørges programmet via UI Automation (se uia.py). Det rører ikke
+udklipsholderen og virker i fx Word, Edge, Chrome og Notesblok.
+
+Understøtter programmet ikke det, gør vi som andre LST-værktøjer: sender Ctrl+C
+til programmet, læser udklipsholderen og lægger det, eleven havde kopieret,
+tilbage bagefter. Aldrig i terminaler, hvor Ctrl+C stopper det, der kører.
 
 Ændrer udklipsholderen sig ikke efter Ctrl+C, var der intet markeret. Derfor
 kan en gammel markering ikke blive læst op igen ved en fejl.
@@ -29,6 +32,8 @@ log = logging.getLogger(__name__)
 COPY_TIMEOUT = 0.6  # så længe venter vi på, at programmet har kopieret
 RESTORE_DELAY = 0.05
 FOREGROUND_POLL = 0.25
+# Terminaler: her afbryder Ctrl+C programmet i stedet for at kopiere
+TERMINAL_CLASSES = {"ConsoleWindowClass", "CASCADIA_HOSTING_WINDOW_CLASS", "PseudoConsoleWindow"}
 # Proceslinjen og dens ikonområder: dem vil vi ikke kopiere fra
 SHELL_CLASSES = {
     "Shell_TrayWnd",
@@ -46,6 +51,7 @@ class ClipboardBackend(Protocol):
     def clear(self) -> None: ...
     def send_copy(self) -> None: ...
     def restore_focus(self) -> None: ...
+    def foreground_class(self) -> str: ...
 
 
 def copy_selection(
@@ -108,6 +114,9 @@ class _Win32Backend:
     def restore_focus(self) -> None:
         self._focus.restore()
 
+    def foreground_class(self) -> str:
+        return self._focus.foreground_class()
+
 
 def is_shell_window(class_name: str) -> bool:
     return class_name in SHELL_CLASSES
@@ -147,6 +156,12 @@ class _ForegroundTracker:
                 self._last = hwnd
             time.sleep(FOREGROUND_POLL)
 
+    def foreground_class(self) -> str:
+        hwnd = self._user32.GetForegroundWindow()
+        if not self._usable(hwnd) and self._last:
+            hwnd = self._last  # proceslinjen eller os selv: det vindue, eleven kom fra
+        return self._class_name(hwnd) if hwnd else ""
+
     def restore(self) -> None:
         current = self._user32.GetForegroundWindow()
         if self._usable(current) or not self._last:
@@ -155,12 +170,34 @@ class _ForegroundTracker:
             time.sleep(0.1)  # giv vinduet tid til at få fokus, før Ctrl+C
 
 
+def is_terminal(class_name: str) -> bool:
+    return class_name in TERMINAL_CLASSES
+
+
+def _uia_selection() -> str | None:
+    from ordhjaelp.platform.windows import uia
+
+    return uia.selected_text()
+
+
 class WindowsSelection:
-    def __init__(self, backend: ClipboardBackend | None = None) -> None:
+    def __init__(
+        self,
+        backend: ClipboardBackend | None = None,
+        uia_selection: Callable[[], str | None] = _uia_selection,
+    ) -> None:
         self._backend = backend or _Win32Backend(_ForegroundTracker())
+        self._uia_selection = uia_selection
         self._clipboard = FreshnessTracker()
+        self._watcher = None
 
     def selected_text(self) -> str | None:
+        self._backend.restore_focus()  # klik på ikonet ved uret flytter fokus til proceslinjen
+        text = self._uia_selection()
+        if text and text.strip():
+            return text.strip()
+        if is_terminal(self._backend.foreground_class()):
+            return None  # Ctrl+C ville stoppe det, der kører i terminalen
         return copy_selection(self._backend)
 
     def clipboard_text(self) -> str | None:
@@ -170,6 +207,14 @@ class WindowsSelection:
             return None
 
     def on_change(self, callback: Callable[[], None]) -> bool:
-        # Kræver UI Automation (kommer senere). Ctrl+C kan ikke bruges til at holde øje.
-        log.warning("Læs ved markering er endnu ikke understøttet på Windows")
-        return False
+        """Meld træk, dobbelt- og trippelklik og Shift+piletaster (se gestures.py)."""
+        if self._watcher is not None:
+            return True
+        from ordhjaelp.platform.windows.gestures import GestureWatcher
+
+        watcher = GestureWatcher(callback)
+        if not watcher.start():
+            return False
+        self._watcher = watcher
+        log.info("Læs ved markering holder øje med musen og tastaturet")
+        return True

@@ -70,6 +70,10 @@ def get_pointer_text() -> PointerText:
         from ordhjaelp.platform.linux.pointer import LinuxPointerText
 
         return LinuxPointerText()
+    if sys.platform == "win32":
+        from ordhjaelp.platform.windows.pointer import WindowsPointerText
+
+        return WindowsPointerText()
     raise PlatformNotSupported(f"Læs under musen understøttes endnu ikke på {sys.platform}")
 
 
