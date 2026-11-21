@@ -70,7 +70,9 @@ class Config:
         }
     )
     # Hvilke ikoner der vises ved uret (læs op-ikonet vises altid – det har menuen)
-    show_icons: dict[str, bool] = field(default_factory=lambda: {"dikter": True, "skaerm": True})
+    show_icons: dict[str, bool] = field(
+        default_factory=lambda: {"dikter": True, "skaerm": True, "pdf": True}
+    )
     view: str = VIEW_TOOLBAR
 
     @property
@@ -163,7 +165,8 @@ knapper = {s(self.view)}
 soegbar = {b(self.pdf_ocr_enabled)}
 
 [ikoner]
-# Hvilke knapper der vises (dikter = mikrofon, skaerm = læs fra skærmen)
+# Hvilke knapper der vises (dikter = mikrofon, skaerm = læs fra skærmen,
+# pdf = gør en scannet PDF søgbar)
 {icons}
 
 [genveje]

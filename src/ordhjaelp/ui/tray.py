@@ -38,6 +38,9 @@ MIC_ICONS = {
 }
 
 
+PDF_TOOLTIP = "Gør en scannet PDF søgbar, så teksten kan markeres og læses op"
+
+
 def _load_icon(name: str) -> QIcon:
     resource = files("ordhjaelp.ui").joinpath("icons", f"{name}.svg")
     with as_file(resource) as path:
@@ -182,6 +185,12 @@ class TrayApp:
                 # Genvejen kommer fra en baggrundstråd – send den via Qt-signal
                 ui_actions["skaerm"] = self._bridge.screen_requested.emit
 
+        # Gør en scannet PDF søgbar (OCR). Vises som standard som knap
+        self._pdf_icon = _load_icon("ordhjaelp-pdf")
+        self.pdf_icon = QSystemTrayIcon(self._pdf_icon)
+        self.pdf_icon.setToolTip(PDF_TOOLTIP)
+        self.pdf_icon.activated.connect(self._on_pdf_activated)
+
         self._build_toolbar(hotkeys)
 
     def _build_toolbar(self, hotkeys: dict[str, str] | None) -> None:
@@ -215,6 +224,7 @@ class TrayApp:
             bar.add_button(
                 "skaerm", self._screen_icons[False], self._screen_tip, self.start_screen_read
             )
+        bar.add_button("pdf", self._pdf_icon, PDF_TOOLTIP, self.open_pdf_ocr)
         self.toolbar = bar
 
     @staticmethod
@@ -314,7 +324,7 @@ class TrayApp:
     def set_icon_visible(self, name: str, visible: bool) -> None:
         if self._settings is not None:
             self._settings.config.show_icons[name] = visible
-        icon = {"dikter": self.mic, "skaerm": self.screen_icon}.get(name)
+        icon = {"dikter": self.mic, "skaerm": self.screen_icon, "pdf": self.pdf_icon}.get(name)
         if icon is not None:
             icon.setVisible(visible and self._view == VIEW_TRAY)
         self.toolbar.set_button_visible(name, visible)
@@ -327,7 +337,11 @@ class TrayApp:
         """
         self._view = view
         icons = self._settings.config.show_icons if self._settings else {}
-        for name, icon in (("dikter", self.mic), ("skaerm", self.screen_icon)):
+        for name, icon in (
+            ("dikter", self.mic),
+            ("skaerm", self.screen_icon),
+            ("pdf", self.pdf_icon),
+        ):
             if icon is not None:
                 icon.setVisible(view == VIEW_TRAY and icons.get(name, True))
             self.toolbar.set_button_visible(name, icons.get(name, True))
@@ -393,6 +407,10 @@ class TrayApp:
             self.screen_icon.setIcon(self._screen_icons[busy])
             tip = "Læser teksten på skærmen …" if busy else self._screen_tip
             self.toolbar.set_button("skaerm", self._screen_icons[busy], tip)
+
+    def _on_pdf_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:
+        if reason == QSystemTrayIcon.ActivationReason.Trigger:
+            self.open_pdf_ocr()
 
     def _on_mic_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:
         if reason == QSystemTrayIcon.ActivationReason.Trigger:

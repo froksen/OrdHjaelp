@@ -48,6 +48,7 @@ def test_save_applies_live_without_restart(app, hooks) -> None:
     d.speed.setValue(80)
     d.clipboard.setChecked(True)
     d.icon_screen.setChecked(False)
+    d.icon_pdf.setChecked(False)
     d.autostart.setChecked(True)
     d.read_sentence.setChecked(True)
     d.accept()
@@ -56,6 +57,7 @@ def test_save_applies_live_without_restart(app, hooks) -> None:
     assert saved.show_icons["skaerm"] is False
     assert calls["clip"] == [True]
     assert ("skaerm", False) in calls["icons"]
+    assert saved.show_icons["pdf"] is False and ("pdf", False) in calls["icons"]
     assert h.autostart.enabled is True
     assert calls["restart"] == 0
     assert h.config.speed == 0.8  # det kørende program kender de nye værdier

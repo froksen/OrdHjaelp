@@ -200,8 +200,11 @@ class SettingsDialog(QDialog):
         self.icon_mic.setChecked(cfg.show_icons.get("dikter", True))
         self.icon_screen = QCheckBox("Læs fra skærmen")
         self.icon_screen.setChecked(cfg.show_icons.get("skaerm", True))
+        self.icon_pdf = QCheckBox("Gør en PDF søgbar")
+        self.icon_pdf.setChecked(cfg.show_icons.get("pdf", True))
         col.addWidget(self.icon_mic)
         col.addWidget(self.icon_screen)
+        col.addWidget(self.icon_pdf)
         # Windows 11 gemmer nye ikoner under ^. Kun brugeren kan vælge at vise dem.
         self.tray_help = QPushButton("Vis ikonerne ved uret …")
         self.tray_help.setToolTip("Sådan bliver ikonerne synlige i stedet for gemt under ^")
@@ -372,6 +375,7 @@ class SettingsDialog(QDialog):
         cfg.pdf_ocr_enabled = self.pdf_ocr.isChecked()
         cfg.show_icons["dikter"] = self.icon_mic.isChecked()
         cfg.show_icons["skaerm"] = self.icon_screen.isChecked()
+        cfg.show_icons["pdf"] = self.icon_pdf.isChecked()
         cfg.view = VIEW_TRAY if self.view_tray.isChecked() else VIEW_TOOLBAR
         return cfg
 
@@ -387,7 +391,7 @@ class SettingsDialog(QDialog):
         hooks.config.view = new.view  # set_icon_visible ser på den valgte visning
         if hooks.set_view is not None and new.view != self._original.view:
             hooks.set_view(new.view)
-        for name in ("dikter", "skaerm"):
+        for name in ("dikter", "skaerm", "pdf"):
             hooks.set_icon_visible(name, new.show_icons[name])
         if hooks.autostart is not None and self.autostart.isEnabled():
             try:

@@ -31,6 +31,8 @@ til Windows og macOS.
 | ✍️ | **Ordforslag** | Forslag ved markøren, mens der skrives – også ved lydret stavning |
 | 🖱️ | **Læs under musen** | Peg med musen og tryk **Ctrl+Alt+1** (ordet), **Ctrl+Alt+2** (sætningen) eller **Ctrl+Alt+3** (herfra og videre). Slås til i indstillingerne |
 | 🗣️ | **Læs mens du skriver** | Ordet læses op ved mellemrum og/eller sætningen ved punktum (slås til i indstillingerne) |
+| 🖱️ | **Læs ved markering** | Dobbeltklik på et ord, og det læses op. Trippelklik læser linjen eller afsnittet (slås til i indstillingerne) |
+| 📄 | **Gør en PDF søgbar** | Klik på den **orange knap**, og vælg en scannet PDF. Der kommer en kopi, hvor teksten kan markeres og læses op. Den gamle PDF bliver ikke ændret |
 
 ### Knaplinjen
 
@@ -40,8 +42,6 @@ ind til en lille fane. Ordhjælp husker, hvor linjen lå. På Wayland huskes pla
 og linjen starter altid nederst til højre (på GNOME vælger skrivebordet selv pladsen). Under
 **⋯** ligger indstillinger, genveje og Luk. Foretrækker man et ikon for hver funktion
 ved uret, vælges det i indstillingerne under **Knapper**.
-| 🖱️ | **Læs ved markering** | Dobbeltklik på et ord, og det læses op. Trippelklik læser linjen eller afsnittet (slås til i indstillingerne) |
-| 📄 | **Gør en PDF søgbar** | Højreklik på det **blå ikon** → **Gør en PDF søgbar**, og vælg en scannet PDF. Der kommer en kopi, hvor teksten kan markeres og læses op (slås til i indstillingerne) |
 
 ### Ordforslag
 
