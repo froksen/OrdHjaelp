@@ -35,8 +35,9 @@ DEFAULT_CONFIG = """\
 stemme = "da_DK-talesyntese-medium"
 # Taletempo: 1.0 er normalt, 0.8 er langsommere, 1.3 er hurtigere.
 tempo = 1.0
-# Brug udklipsholderen, hvis der ikke er markeret noget tekst.
-brug_udklipsholder = true
+# Brug udklipsholderen (Ctrl+C), hvis der ikke er markeret noget tekst.
+# Slået fra som standard, da det kan læse gammel, kopieret tekst op.
+brug_udklipsholder = false
 
 [genveje]
 # Ønskede tastaturgenveje. På KDE/GNOME kan de ændres i systemindstillingerne.
@@ -49,7 +50,7 @@ stop = "CTRL+ALT+S"
 class Config:
     voice: str = "da_DK-talesyntese-medium"
     speed: float = 1.0
-    use_clipboard_fallback: bool = True
+    use_clipboard_fallback: bool = False
     hotkeys: dict[str, str] = field(
         default_factory=lambda: {"laes": "CTRL+ALT+L", "stop": "CTRL+ALT+S"}
     )

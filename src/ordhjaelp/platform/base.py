@@ -12,7 +12,11 @@ from typing import Protocol
 
 class SelectionProvider(Protocol):
     def selected_text(self) -> str | None:
-        """Returnér den tekst, brugeren har markeret, eller None."""
+        """Returnér den tekst, brugeren har markeret, eller None.
+
+        En gammel markering, som allerede er læst op og ikke er markeret igen
+        siden, skal give None – ellers "husker" programmet fjernede markeringer.
+        """
         ...
 
     def clipboard_text(self) -> str | None:
