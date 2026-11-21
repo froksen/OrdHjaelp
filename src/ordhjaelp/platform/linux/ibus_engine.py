@@ -225,7 +225,8 @@ class OrdhjaelpEngine(IBus.Engine):
         self.update_preedit_text(text, len(word), True)
 
         reply = ask({"cmd": "forslag", "ord": word}) or {}
-        self._candidates = [w for w in reply.get("forslag", []) if w != word][:PAGE_SIZE]
+        # Det skrevne ord bliver stående, hvis ordbogen kender det (så ses det, at det er rigtigt)
+        self._candidates = list(reply.get("forslag", []))[:PAGE_SIZE]
         self._table.clear()
         self._table.set_cursor_visible(False)
         for i, candidate in enumerate(self._candidates):
