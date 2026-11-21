@@ -114,3 +114,26 @@ def test_read_at_pointer_checkbox_saves(app, hooks) -> None:
     d.accept()
     assert Config.from_toml((tmp / "config.toml").read_text()).read_at_pointer is True
     assert calls["restart"] == 1  # genvejene registreres ved start
+
+
+def test_no_label_is_clipped(app, hooks) -> None:
+    """Al tekst i vinduet skal kunne ses helt (en hjælpetekst blev klippet over)."""
+    from PySide6.QtWidgets import QLabel
+
+    h, _calls, _tmp = hooks
+    d = SettingsDialog(h)
+    d.adjustSize()
+    d.show()
+    app.processEvents()
+    try:
+        for label in d.findChildren(QLabel):
+            if not label.isVisible() or not label.text():
+                continue
+            if label.wordWrap():
+                needed = label.heightForWidth(label.width())
+            else:
+                needed = label.sizeHint().height()
+                assert label.width() >= label.sizeHint().width(), label.text()
+            assert label.height() >= needed, f"klippet: {label.text()!r}"
+    finally:
+        d.close()

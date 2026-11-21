@@ -104,17 +104,17 @@ class SettingsDialog(QDialog):
         form.addRow(self.read_on_select)
         note = QLabel("Dobbeltklik læser et ord. Trippelklik læser linjen eller afsnittet.")
         note.setStyleSheet("color: gray")
-        note.setWordWrap(True)
         form.addRow(note)
         self.read_at_pointer = QCheckBox("Læs under musen med genveje")
         self.read_at_pointer.setChecked(cfg.read_at_pointer)
         form.addRow(self.read_at_pointer)
+        # Faste linjeskift: QFormLayout giver ikke en QLabel med wordWrap nok højde,
+        # så teksten blev klippet over
         note = QLabel(
-            "Peg med musen og tryk Ctrl+Alt+1 (ordet), Ctrl+Alt+2 (sætningen) eller "
-            "Ctrl+Alt+3 (herfra og videre). Virker i fx Firefox og LibreOffice."
+            "Peg med musen og tryk Ctrl+Alt+1 (ordet), Ctrl+Alt+2 (sætningen)\n"
+            "eller Ctrl+Alt+3 (herfra og videre). Virker fx i Firefox og LibreOffice."
         )
         note.setStyleSheet("color: gray")
-        note.setWordWrap(True)
         form.addRow(note)
         layout.addWidget(box)
 
