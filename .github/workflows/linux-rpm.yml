@@ -1,0 +1,69 @@
+name: Linux-RPM
+
+# Bygger build/rpm/ordhjaelp-<version>-1.fc<NN>.x86_64.rpm i en Fedora-container.
+# - Ved en tag som v0.3.0 lægges RPM-filen på GitHub-udgivelsen.
+# - Ellers kan den hentes under "Artifacts" på workflow-kørslen.
+# - Manuelt (Actions → Linux-RPM → Run workflow) kan den bygges til en udgivelse, der
+#   allerede findes, fx v0.3.0.
+on:
+  push:
+    tags: ["v*"]
+  pull_request:
+    paths:
+      - "packaging/linux/**"
+      - ".github/workflows/linux-rpm.yml"
+      - "pyproject.toml"
+      - "uv.lock"
+  workflow_dispatch:
+    inputs:
+      udgivelse:
+        description: "Udgivelse at bygge og lægge RPM-filen på (fx v0.3.0). Tom = byg kun."
+        required: false
+        default: ""
+
+concurrency:
+  group: linux-rpm-${{ github.ref }}-${{ inputs.udgivelse }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write # til at lægge RPM-filen på udgivelsen
+
+jobs:
+  rpm:
+    runs-on: ubuntu-latest
+    container: registry.fedoraproject.org/fedora:latest
+    steps:
+      - name: Byggeværktøjer
+        run: dnf -y -q install rpm-build git tar gzip findutils gh
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.udgivelse || github.ref }}
+      - uses: astral-sh/setup-uv@v6
+      - name: Byg RPM-filen
+        run: packaging/linux/build-rpm.sh
+      - name: Afprøv RPM-filen (installér med dnf og start)
+        run: |
+          rpm -qip build/rpm/*.rpm
+          # dnf henter også afhængighederne (tesseract, hunspell, ibus …), så de skal findes i Fedora
+          dnf -y -q install build/rpm/*.rpm
+          ordhjaelp --help
+          /opt/ordhjaelp/python/bin/python3 -c "import ordhjaelp.daemon, piper, faster_whisper, PySide6.QtCore; print('Ordhjælps moduler kan indlæses')"
+          test -f /usr/share/applications/dk.ordhjaelp.Ordhjaelp.desktop
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ordhjaelp-RPM
+          path: build/rpm/*.rpm
+          if-no-files-found: error
+          compression-level: 0 # er allerede pakket
+      - name: Læg RPM-filen på udgivelsen
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.udgivelse != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          UDGIVELSE: ${{ inputs.udgivelse || github.ref_name }}
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          if ! gh release view "$UDGIVELSE" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            # Windows-workflowen kan nå at oprette den samme udgivelse først
+            gh release create "$UDGIVELSE" -R "$GITHUB_REPOSITORY" --title "Ordhjælp $UDGIVELSE" --generate-notes || true
+          fi
+          gh release upload "$UDGIVELSE" build/rpm/*.rpm -R "$GITHUB_REPOSITORY" --clobber

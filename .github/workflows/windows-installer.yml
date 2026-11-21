@@ -98,5 +98,9 @@ jobs:
         run: |
           $files = (Get-ChildItem dist\Ordhjaelp-*-Setup.exe, dist\Ordhjaelp-*-Windows.zip, packaging\windows\install.ps1).FullName
           gh release view $env:GITHUB_REF_NAME 2>$null
-          if ($LASTEXITCODE) { gh release create $env:GITHUB_REF_NAME --title "Ordhjælp $env:GITHUB_REF_NAME" --generate-notes }
+          if ($LASTEXITCODE) {
+            # RPM-workflowen kan nå at oprette den samme udgivelse først
+            gh release create $env:GITHUB_REF_NAME --title "Ordhjælp $env:GITHUB_REF_NAME" --generate-notes
+            $global:LASTEXITCODE = 0
+          }
           gh release upload $env:GITHUB_REF_NAME @files --clobber
