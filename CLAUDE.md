@@ -8,7 +8,8 @@ og Windows. Alt styresystemspecifikt ligger i `src/ordhjaelp/platform/`.
 - Al tekst i kode, kommentarer, commits og brugerflade er på dansk.
 - Hver funktion i sin egen branch ud fra `main`, så den kan blive en selvstændig PR.
 - Nye funktioner er slået fra som standard og slås til i indstillingerne.
-- **Før push:** kør `scripts/tjek.sh`. Den kører det samme som GitHub Actions på Linux.
+- **Før push:** kør `scripts/tjek.sh` fra repoet (ikke en kopi andetsteds: scriptet
+  skifter til mappen over sin egen placering). Push aldrig, når den fejler.
 - **Efter push:** vent på hele CI-resultatet (Linux og Windows), og ret alle fejl i én
   push. Push ikke én rettelse ad gangen.
 - Spring aldrig en test over for at få grønt. En test, der tester Linux-kode, må springe
@@ -62,6 +63,12 @@ og Windows. Alt styresystemspecifikt ligger i `src/ordhjaelp/platform/`.
   (AT-SPI, Ctrl+C), skal i en egen tråd, ellers fejler `asyncio.run`.
 - AT-SPI-integrationstesten kræver systemets Python med `gi` (ikke venv'ens), Xvfb,
   xdotool, dbus-launch og at-spi2-core. Kør med `ORDHJAELP_ATSPI_TEST=1`.
+
+### Brugerflade (Qt)
+- En `QLabel` med `setWordWrap(True)` i en `QFormLayout` får ikke nok højde, så teksten
+  klippes over. Brug faste linjeskift (`\n`). `test_no_label_is_clipped` fanger det.
+- Tag et skærmbillede af vinduer, der ændres (offscreen, `QT_SCALE_FACTOR=2`,
+  `widget.grab()`), og se på det. Fejlen ovenfor blev kun fundet sådan.
 
 ### Testmiljø (Linux-container)
 - Qt-testene kræver `libegl1 libgl1 libxkbcommon0 libfontconfig1`, og lydtestene
