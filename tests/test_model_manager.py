@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 
 import pytest
@@ -9,7 +10,7 @@ from PySide6.QtWidgets import QApplication, QMessageBox  # noqa: E402
 from ordhjaelp import config as config_mod  # noqa: E402
 from ordhjaelp.config import Config  # noqa: E402
 from ordhjaelp.models.catalog import CATALOG, Kind, get, of_kind  # noqa: E402
-from ordhjaelp.ui import model_manager  # noqa: E402
+from ordhjaelp.ui import model_manager, tray_help  # noqa: E402
 from ordhjaelp.ui.model_manager import (  # noqa: E402
     FirstRunDialog,
     ModelManagerDialog,
@@ -25,6 +26,7 @@ def app():
 @pytest.fixture(autouse=True)
 def isolated(tmp_path, monkeypatch):
     monkeypatch.setattr(config_mod, "config_dir", lambda: tmp_path)
+    monkeypatch.setattr(tray_help, "data_dir", lambda: tmp_path / "data")
     # Ingen rigtige beskedbokse i tests – svar altid "Ja"
     monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Yes)
     monkeypatch.setattr(QMessageBox, "warning", lambda *a, **k: None)
@@ -150,3 +152,62 @@ def test_catalog_sources_are_ready_made() -> None:
     assert get("dansk-hurtig").source == "lucasw89/whisper-small-danish-ct2-int8"
     assert all(m.size_mb > 0 and m.title for m in CATALOG)
     assert model_manager.SECTION_TITLES.keys() == {Kind.VOICE, Kind.SPEECH}
+
+
+# -- grundindstillinger i velkomstvinduet ----------------------------------------
+class FakeAutostart:
+    def __init__(self) -> None:
+        self.enabled = False
+
+    def is_enabled(self) -> bool:
+        return self.enabled
+
+    def set_enabled(self, enabled: bool) -> None:
+        self.enabled = enabled
+
+
+def test_first_run_saves_basic_settings(app, tmp_path) -> None:
+    cfg = Config()
+    autostart = FakeAutostart()
+    dialog = FirstRunDialog(FakeStore({VOICE.id, "dansk-hurtig"}), cfg, autostart)
+    basics = dialog.basics
+    assert basics.autostart.isChecked()  # foreslået som standard
+    basics.prediction.setChecked(False)
+    basics.read_sentence.setChecked(True)
+    basics.read_on_select.setChecked(True)
+    basics.read_at_pointer.setChecked(True)
+    dialog._start()
+    assert wait_until(lambda: dialog.result() == dialog.DialogCode.Accepted)
+    assert autostart.enabled
+    saved = Config.from_toml((tmp_path / "config.toml").read_text("utf-8"))
+    assert not saved.prediction_enabled
+    assert saved.read_sentence_on_period and saved.read_on_select and saved.read_at_pointer
+    assert cfg.read_at_pointer  # Ordhjælp starter med det samme med valgene
+
+
+def test_first_run_without_autostart_support_hides_it(app) -> None:
+    dialog = FirstRunDialog(FakeStore(), Config(), autostart=None)
+    assert not dialog.basics.autostart.isVisibleTo(dialog)
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="ikonerne ved uret: kun Windows")
+def test_first_run_tray_icons_choice(app) -> None:
+    dialog = FirstRunDialog(FakeStore({VOICE.id, "dansk-hurtig"}), Config())
+    assert dialog.basics.tray_icons.isChecked()
+    dialog._start()
+    assert wait_until(lambda: dialog.result() == dialog.DialogCode.Accepted)
+    assert tray_help.take_help_request()  # vejledningen åbnes ved start
+    assert not tray_help.take_help_request()  # kun én gang
+    assert not tray_help.should_show_first_run_tip()  # og ingen besked oveni
+
+    dialog = FirstRunDialog(FakeStore({VOICE.id, "dansk-hurtig"}), Config())
+    dialog.basics.tray_icons.setChecked(False)
+    dialog._start()
+    assert wait_until(lambda: dialog.result() == dialog.DialogCode.Accepted)
+    assert not tray_help.take_help_request()
+
+
+def test_first_run_fits_small_school_screen(app) -> None:
+    dialog = FirstRunDialog(FakeStore(), Config(), FakeAutostart())
+    # 1366x768 med 125 % skalering giver ca. 614 punkter i højden
+    assert dialog.minimumSizeHint().height() <= 600
