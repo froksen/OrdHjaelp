@@ -1,5 +1,5 @@
 ﻿; Inno Setup: installer til Ordhjælp på Windows.
-; Bygges af build-installer.ps1, som giver versionen med: ISCC /DAppVersion=0.2.0 ordhjaelp.iss
+; Bygges af build-installer.ps1, som giver versionen med: ISCC /DAppVersion=0.3.0 ordhjaelp.iss
 ;
 ; Installeres for den aktuelle bruger (kræver ikke administrator), ligesom Ordhjælps
 ; autostart, indstillinger og sprogmodeller også er pr. bruger.

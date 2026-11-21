@@ -123,11 +123,27 @@ Derefter:
 
 ## Installation (Windows, prøveudgave)
 
-Hent Ordhjælp under [Releases](https://github.com/froksen/OrdHj-lp/releases). Der er to udgaver:
+**Med PowerShell (anbefalet):** åbn PowerShell, og kopiér denne linje ind:
+
+```powershell
+irm https://github.com/froksen/OrdHj-lp/releases/latest/download/install.ps1 | iex
+```
+
+Scriptet henter den nyeste zip-fil, pakker den ud i `%LOCALAPPDATA%\Programs\Ordhjaelp`, lægger en
+genvej i startmenuen, slår autostart til og starter Ordhjælp. Ordhjælp kan bagefter fjernes
+under *Indstillinger → Apps* som andre programmer. Scriptet kan også hentes og læses igennem
+først: [`packaging/windows/install.ps1`](packaging/windows/install.ps1). Valg (fx uden autostart):
+
+```powershell
+& ([scriptblock]::Create((irm https://github.com/froksen/OrdHj-lp/releases/latest/download/install.ps1))) -IngenAutostart -Skrivebord
+```
+
+**Eller hent selv** under [Releases](https://github.com/froksen/OrdHj-lp/releases):
 
 - **Ordhjaelp-<version>-Windows.zip**: pak den ud (højreklik → *Udpak alle …*), og dobbeltklik på
   `Ordhjaelp.exe` i mappen. Der skal ikke installeres noget. Den virker også på pc'er med
-  Smart App Control, hvor installeren bliver blokeret, fordi den ikke er signeret.
+  Smart App Control, hvor installeren bliver blokeret, fordi den ikke er signeret. Det samme
+  gør PowerShell-scriptet.
 - **Ordhjaelp-<version>-Setup.exe**: en almindelig installer med genvej i startmenuen og
   afinstallation under Windows' indstillinger.
 
@@ -139,7 +155,7 @@ logget ind (i `%LOCALAPPDATA%\Programs\Ordhjaelp`).
 - Første gang hentes stemmen og talegenkendelsen (ca. 300 MB).
 - Ordhjælp er ikke signeret endnu. Windows kan derfor vise "Windows beskyttede din pc".
   Klik på **Flere oplysninger** og derefter **Kør alligevel**. Er Smart App Control slået til,
-  blokerer Windows installeren. Brug så zip-filen.
+  blokerer Windows installeren. Brug så PowerShell-scriptet eller zip-filen.
 
 Fra kildekoden (til udvikling):
 
@@ -277,6 +293,51 @@ Ordhjælp er under udvikling og afprøves på Fedora KDE Plasma (Wayland).
 - [x] Windows: læs ved markering, læs under musen (UI Automation, prøveudgave)
 - [ ] Windows: signeret installer
 - [ ] macOS
+
+## Forfattere
+
+- **Ole Frandsen** ([@froksen](https://github.com/froksen)): hovedforfatter og vedligeholder
+- **qvisty** ([@qvisty](https://github.com/qvisty)): bidragsyder (Windows-udgaven, læs ved
+  markering, læs under musen, udviklingsnoter)
+
+## Kodesignering (code signing policy)
+
+Ordhjælp er søgt om gratis kodesignering hos [SignPath Foundation](https://signpath.org/).
+Indtil det er godkendt, er Windows-filerne **ikke** signeret.
+
+Alle filer til Windows bygges af GitHub Actions direkte fra kildekoden i dette repo
+([`.github/workflows/windows-installer.yml`](.github/workflows/windows-installer.yml)).
+Ingen bygger dem på sin egen computer.
+
+**Roller:**
+
+| Rolle | Hvem |
+|---|---|
+| Forfattere (committers) | [Ole Frandsen (@froksen)](https://github.com/froksen) |
+| Gennemlæsere (reviewers) | [Ole Frandsen (@froksen)](https://github.com/froksen) |
+| Godkendere (approvers) | [Ole Frandsen (@froksen)](https://github.com/froksen) |
+| Bidragsydere | [qvisty (@qvisty)](https://github.com/qvisty) og andre, der laver pull requests |
+
+- Alle ændringer fra bidragsydere kommer ind som pull requests og gennemlæses af en
+  forfatter, før de flettes. Det gælder også byggescripts og GitHub Actions.
+- Hver udgivelse, der skal signeres, godkendes manuelt af en godkender.
+- Alle i teamet bruger to-trinslogin (MFA) på GitHub.
+
+<!-- Når SignPath har godkendt projektet, erstattes de to første linjer i afsnittet med:
+Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org)
+-->
+
+### Privatliv
+
+Ordhjælp kører på computeren og sender ingen tekst, lyd eller oplysninger om brugeren ud.
+Programmet henter kun noget fra internettet, når brugeren beder om det eller første gang:
+
+- sprogmodeller (stemme og talegenkendelse) fra [Hugging Face](https://huggingface.co)
+- ved installation med PowerShell: den nyeste udgave fra GitHub (`api.github.com` og `github.com`)
+
+Der er ingen statistik, sporing eller automatisk opdatering. Indstillinger og sprogmodeller
+ligger kun på computeren (`%LOCALAPPDATA%\ordhjaelp` på Windows, `~/.config/ordhjaelp` og
+`~/.local/share/ordhjaelp` på Linux).
 
 ## Licens
 
