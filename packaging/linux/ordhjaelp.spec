@@ -56,6 +56,13 @@ cp -a %{stage}/. %{buildroot}/
 /usr/bin/gtk-update-icon-cache -q %{_datadir}/icons/hicolor &>/dev/null || :
 
 %changelog
+* Sat Nov 21 2026 Ole Frandsen - 0.4.0.0-1
+- Knaplinje: alle knapper samlet i en lille linje på skærmen, altid øverst
+- Gør en scannet PDF søgbar, så teksten kan markeres og læses op
+- Indstillingerne er delt i fire faner
+- RPM-fil til Fedora bygges af GitHub Actions
+- Kun Fedora KDE og Windows understøttes officielt
+
 * Sat Nov 21 2026 Ole Frandsen - 0.3.0-1
 - Windows: ordforslag og læs mens du skriver (tastaturovervågning og forslagsvindue)
 - Windows: læs ved markering og læs under musen med UI Automation
