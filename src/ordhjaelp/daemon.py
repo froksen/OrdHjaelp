@@ -27,6 +27,7 @@ from ordhjaelp.services.dictation import DictationService
 from ordhjaelp.services.pointer_read import UNITS, PointerReadService
 from ordhjaelp.services.read_aloud import ReadAloudService
 from ordhjaelp.services.screen_read import ScreenReadService
+from ordhjaelp.services.selection_read import SelectionAutoReader
 from ordhjaelp.services.word_prediction import WordPredictionService
 from ordhjaelp.tts.piper_engine import PiperEngine, ensure_voice
 
@@ -40,12 +41,16 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
     model = ensure_voice(cfg.voice, voices_dir())
     log.info("Indlæser stemmen %s", cfg.voice)
     tts = PiperEngine(model, speed=cfg.speed)
+    selection = get_selection_provider()
     service = ReadAloudService(
         tts=tts,
         player=Player(),
-        selection=get_selection_provider(),
+        selection=selection,
         use_clipboard_fallback=cfg.use_clipboard_fallback,
     )
+    set_read_on_select = _make_read_on_select(selection, service)
+    if cfg.read_on_select:
+        set_read_on_select(True)
     dictation = _make_dictation(cfg, service) if cfg.dictation_enabled else None
     screen = _make_screen_reader(service)
     pointer = _make_pointer_reader(service) if cfg.read_at_pointer else None
@@ -147,7 +152,7 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
         os.kill(os.getpid(), signal.SIGTERM)  # luk pænt – derefter startes forfra
 
     try:
-        hooks = _settings_hooks(cfg, tts, service, restart) if tray else None
+        hooks = _settings_hooks(cfg, tts, service, restart, set_read_on_select) if tray else None
         if not (tray and _run_tray(service, dictation, screen, ui_actions, hooks)):
             _wait_for_signal()
     finally:
@@ -166,7 +171,23 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
         os.execv(sys.executable, [sys.executable, "-m", "ordhjaelp", *sys.argv[1:]])
 
 
-def _settings_hooks(cfg: Config, tts: PiperEngine, service: ReadAloudService, restart):  # noqa: ANN001, ANN202
+def _make_read_on_select(selection, service: ReadAloudService) -> Callable[[bool], None]:  # noqa: ANN001
+    """Læs ved markering. Platformen begynder først at lytte, når det slås til."""
+    reader = SelectionAutoReader(service.read_new_selection)
+    listening = False
+
+    def set_enabled(enabled: bool) -> None:
+        nonlocal listening
+        if enabled and not listening:
+            listening = selection.on_change(reader.selection_changed)
+        reader.enabled = enabled and listening
+
+    return set_enabled
+
+
+def _settings_hooks(
+    cfg: Config, tts: PiperEngine, service: ReadAloudService, restart, set_read_on_select
+):  # noqa: ANN001, ANN202
     try:
         from ordhjaelp.ui.settings import SettingsHooks
     except ImportError:
@@ -190,6 +211,7 @@ def _settings_hooks(cfg: Config, tts: PiperEngine, service: ReadAloudService, re
         set_icon_visible=lambda name, visible: None,  # sættes af brugerfladen
         restart=restart,
         autostart=autostart,
+        set_read_on_select=set_read_on_select,
     )
 
 

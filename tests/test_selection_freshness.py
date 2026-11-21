@@ -33,3 +33,25 @@ def test_empty_is_none_and_does_not_reset() -> None:
     assert t.fresh(None, 1) is None
     assert t.fresh("", 1) is None
     assert t.fresh("hej", 1) is None
+
+
+def test_x11_poller_reports_only_new_selections(monkeypatch) -> None:
+    import threading
+
+    from ordhjaelp.platform.linux import selection as sel
+
+    texts = iter(["allerede markeret", "allerede markeret", "nyt ord", "nyt ord"])
+    monkeypatch.setattr(sel, "_X11_POLL_INTERVAL", 0.01)
+    monkeypatch.setattr(sel, "_run", lambda _cmds: next(texts, "nyt ord"))
+    changed = threading.Event()
+    calls: list[int] = []
+
+    def on_change() -> None:
+        calls.append(1)
+        changed.set()
+
+    poller = sel._X11SelectionPoller()
+    poller.add_callback(on_change)
+    assert changed.wait(1)
+    threading.Event().wait(0.1)
+    assert calls == [1]  # kun "nyt ord" er en ændring

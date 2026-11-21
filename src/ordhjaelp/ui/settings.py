@@ -42,6 +42,7 @@ class SettingsHooks:
     set_icon_visible: Callable[[str, bool], None]
     restart: Callable[[], None]
     autostart: Autostart | None = None
+    set_read_on_select: Callable[[bool], None] | None = None
 
 
 def needs_restart(old: Config, new: Config) -> bool:
@@ -95,6 +96,13 @@ class SettingsDialog(QDialog):
         self.clipboard = QCheckBox("Læs udklipsholderen (Ctrl+C), hvis intet er markeret")
         self.clipboard.setChecked(cfg.use_clipboard_fallback)
         form.addRow(self.clipboard)
+        self.read_on_select = QCheckBox("Læs op, så snart der markeres tekst med musen")
+        self.read_on_select.setChecked(cfg.read_on_select)
+        form.addRow(self.read_on_select)
+        note = QLabel("Dobbeltklik læser et ord. Trippelklik læser linjen eller afsnittet.")
+        note.setStyleSheet("color: gray")
+        note.setWordWrap(True)
+        form.addRow(note)
         self.read_at_pointer = QCheckBox("Læs under musen med genveje")
         self.read_at_pointer.setChecked(cfg.read_at_pointer)
         form.addRow(self.read_at_pointer)
@@ -190,6 +198,7 @@ class SettingsDialog(QDialog):
         cfg = copy.deepcopy(self._original)
         cfg.speed = self.speed.value() / 100
         cfg.use_clipboard_fallback = self.clipboard.isChecked()
+        cfg.read_on_select = self.read_on_select.isChecked()
         cfg.read_at_pointer = self.read_at_pointer.isChecked()
         cfg.dictation_enabled = self.dictation.isChecked()
         cfg.dictation_model = str(self.model.currentData())
@@ -205,6 +214,8 @@ class SettingsDialog(QDialog):
         hooks = self._hooks
         save_config(new)
         hooks.set_clipboard_fallback(new.use_clipboard_fallback)
+        if hooks.set_read_on_select is not None:
+            hooks.set_read_on_select(new.read_on_select)
         for name in ("dikter", "skaerm"):
             hooks.set_icon_visible(name, new.show_icons[name])
         if hooks.autostart is not None and self.autostart.isEnabled():

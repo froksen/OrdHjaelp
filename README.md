@@ -30,6 +30,7 @@ til Windows og macOS.
 | ✍️ | **Ordforslag** | Forslag ved markøren, mens der skrives – også ved lydret stavning |
 | 🖱️ | **Læs under musen** | Peg med musen og tryk **Ctrl+Alt+1** (ordet), **Ctrl+Alt+2** (sætningen) eller **Ctrl+Alt+3** (herfra og videre). Slås til i indstillingerne |
 | 🗣️ | **Læs mens du skriver** | Ordet læses op ved mellemrum og/eller sætningen ved punktum (slås til i indstillingerne) |
+| 🖱️ | **Læs ved markering** | Dobbeltklik på et ord, og det læses op. Trippelklik læser linjen eller afsnittet (slås til i indstillingerne) |
 
 ### Ordforslag
 
@@ -69,7 +70,7 @@ tilgængeligheds-API'en **AT-SPI**, den samme som skærmlæseren Orca.
 ### Indstillinger
 
 Højreklik på det blå ikon → **Indstillinger**: taletempo (med "Prøv stemmen"),
-diktering og talemodel, ordforslag, læs mens du skriver, hvilke ikoner der vises, og
+læs ved markering, diktering og talemodel, ordforslag, læs mens du skriver, hvilke ikoner der vises, og
 autostart ved login. Indstillingerne gemmes i `~/.config/ordhjaelp/config.toml`.
 
 ## Installation (Fedora KDE)
