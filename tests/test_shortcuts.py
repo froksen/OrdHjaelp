@@ -69,4 +69,5 @@ def test_suggestion_popup_shows_keys(app) -> None:
     layout = popup.layout()
     assert layout.itemAt(layout.count() - 1).widget() is popup.hint  # nederst
     assert "Esc" in popup.hint.text()
+    assert "Højreklik" in popup.hint.text()
     popup.hide()

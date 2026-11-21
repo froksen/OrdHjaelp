@@ -89,8 +89,8 @@ class SuggestionPopup(QFrame):
         layout.setContentsMargins(1, 1, 1, 1)
         layout.setSpacing(0)
         self.rows: list[_Row] = []
-        # Tasterne står nederst, så de ikke er skjulte
-        self.hint = QLabel("↓↑ vælg · Tab tag · Esc luk")
+        # Tasterne og musen står nederst, så de ikke er skjulte
+        self.hint = QLabel("↓↑ vælg · Tab tag · Esc luk\nHøjreklik på et ord for at høre det")
         self.hint.setStyleSheet("color: gray; font-size: 9pt; padding: 1px 8px 3px 8px;")
         layout.addWidget(self.hint)
         self._signals = _Signals()
