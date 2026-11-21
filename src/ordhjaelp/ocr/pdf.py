@@ -174,9 +174,7 @@ def _tesseract_page(language: str) -> PageOcr:
     def run(image: Path, out: Path, dpi: int) -> None:
         result = subprocess.run(
             [exe, *_tessdata_args(exe), str(image), str(out), "-l", language]
-            # Indstillingen direkte, ikke konfigurationsfilen "pdf": den ligger i
-            # tessdata/configs, som Windows-installerens tessdata ikke har
-            + ["--dpi", str(dpi), "-c", "tessedit_create_pdf=1"],
+            + ["--dpi", str(dpi), "pdf"],
             capture_output=True,
             timeout=300,
             check=False,
