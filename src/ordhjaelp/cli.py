@@ -19,8 +19,10 @@ def main(argv: list[str] | None = None) -> int:
     p_start.add_argument(
         "--uden-genveje", action="store_true", help="registrér ikke globale genveje"
     )
+    p_start.add_argument("--uden-ikon", action="store_true", help="vis ikke ikonet ved uret")
     sub.add_parser("laes", help="læs markeret tekst op (eller stop, hvis der læses)")
     sub.add_parser("stop", help="stop oplæsning")
+    sub.add_parser("afslut", help="luk Ordhjælp helt")
     p_sig = sub.add_parser("sig", help="læs en tekst op")
     p_sig.add_argument("tekst", nargs="+")
     sub.add_parser("hent-stemme", help="hent den valgte stemme")
@@ -37,9 +39,12 @@ def main(argv: list[str] | None = None) -> int:
     cfg = load_config()
 
     if args.cmd == "start":
+        if ipc.is_running():
+            print("Ordhjælp kører allerede")
+            return 0
         from ordhjaelp import daemon
 
-        daemon.run(cfg, hotkeys=not args.uden_genveje)
+        daemon.run(cfg, hotkeys=not args.uden_genveje, tray=not args.uden_ikon)
         return 0
 
     if args.cmd == "hent-stemme":

@@ -3,8 +3,9 @@
 Dansk læse- og skrivehjælp (LST) til Linux – gratis, open source og offline.
 Senere også Windows og macOS.
 
-**Fase 1 (nu):** Markér tekst hvor som helst, tryk **Ctrl+Alt+L**, og teksten
-læses op med en naturlig dansk stemme. Tryk igen (eller **Ctrl+Alt+S**) for at stoppe.
+**Sådan bruges den:** Markér tekst hvor som helst, og **klik på det blå ikon ved uret**
+(eller tryk **Ctrl+Alt+L**). Teksten læses op med en naturlig dansk stemme.
+Mens der læses, er ikonet rødt – klik igen (eller **Ctrl+Alt+S**) for at stoppe.
 
 ## Kom i gang (Fedora/KDE)
 
@@ -23,7 +24,8 @@ Stemmen (ca. 60 MB) hentes automatisk første gang.
 
 | Kommando | Hvad den gør |
 |---|---|
-| `ordhjaelp start` | Starter tjenesten (holder stemmen klar og lytter efter genveje) |
+| `ordhjaelp start` | Starter tjenesten med ikon ved uret (`--uden-ikon` for uden) |
+| `ordhjaelp afslut` | Lukker Ordhjælp helt |
 | `ordhjaelp laes` | Læser markeret tekst op – eller stopper, hvis der læses |
 | `ordhjaelp stop` | Stopper oplæsning |
 | `ordhjaelp sig "tekst"` | Læser en tekst op |
@@ -46,6 +48,7 @@ src/ordhjaelp/
 │   ├── linux/      Wayland/X11, xdg-desktop-portal
 │   ├── windows/    (senere)
 │   └── macos/      (senere)
+├── ui/             ikon ved uret (Qt – virker på alle styresystemer)
 ├── ipc.py          kommunikation mellem kommandoer og tjenesten
 ├── daemon.py       baggrundstjenesten
 └── cli.py          kommandolinjen

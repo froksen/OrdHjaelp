@@ -41,9 +41,11 @@ class FakeSelection:
         return self.clipboard
 
 
-def make(selected=None, clipboard=None, block=False, fallback=True):
+def make(selected=None, clipboard=None, block=False, fallback=True, hint=None):
     tts, player = FakeTTS(), FakePlayer(block)
-    svc = ReadAloudService(tts, player, FakeSelection(selected, clipboard), fallback)
+    svc = ReadAloudService(
+        tts, player, FakeSelection(selected, clipboard), fallback, nothing_selected_hint=hint
+    )
     return svc, tts, player
 
 
@@ -91,3 +93,33 @@ def test_new_text_interrupts_old() -> None:
     svc.stop()
     svc.wait(2)
     assert tts.texts == ["første", "anden"]
+
+
+def test_hint_spoken_when_nothing_selected() -> None:
+    svc, tts, _ = make(None, None, hint="Markér noget tekst først.")
+    assert not svc.read_selection()
+    svc.wait(2)
+    assert tts.texts == ["Markér noget tekst først."]
+
+
+def test_listeners_get_start_and_stop() -> None:
+    svc, _, player = make("tekst", block=True)
+    events: list[bool] = []
+    svc.add_listener(events.append)
+    svc.toggle()
+    assert player.started.wait(2)
+    svc.stop()
+    svc.wait(2)
+    assert events == [True, False]
+
+
+def test_listener_errors_do_not_break_reading() -> None:
+    svc, tts, _ = make("tekst")
+
+    def broken(_: bool) -> None:
+        raise RuntimeError("ups")
+
+    svc.add_listener(broken)
+    assert svc.read_selection()
+    svc.wait(2)
+    assert tts.texts == ["tekst"]

@@ -13,6 +13,8 @@ from ordhjaelp.tts.piper_engine import SpeechChunk
 
 log = logging.getLogger(__name__)
 
+NOTHING_SELECTED_HINT = "Markér noget tekst først."
+
 
 class Synthesizer(Protocol):
     def synthesize(self, text: str) -> Iterable[SpeechChunk]: ...
@@ -29,6 +31,7 @@ class ReadAloudService:
         player: AudioPlayer,
         selection: SelectionProvider,
         use_clipboard_fallback: bool = True,
+        nothing_selected_hint: str | None = NOTHING_SELECTED_HINT,
     ) -> None:
         self._tts = tts
         self._player = player
@@ -37,6 +40,15 @@ class ReadAloudService:
         self._lock = threading.Lock()
         self._stop = threading.Event()
         self._worker: threading.Thread | None = None
+        self._hint = nothing_selected_hint
+        self._listeners: list[Callable[[bool], None]] = []
+
+    def add_listener(self, callback: Callable[[bool], None]) -> None:
+        """Kaldes med True når oplæsning starter og False når den slutter.
+
+        Bemærk: kaldes fra en baggrundstråd.
+        """
+        self._listeners.append(callback)
 
     @property
     def speaking(self) -> bool:
@@ -63,6 +75,8 @@ class ReadAloudService:
             text = self._selection.clipboard_text()
         if not text:
             log.info("Ingen markeret tekst")
+            if self._hint:
+                self.say(self._hint)
             return False
         return self.say(text)
 
@@ -88,6 +102,7 @@ class ReadAloudService:
             self._worker.join(timeout=2)
 
     def _run(self, text: str, stop: threading.Event, on_done: Callable[[], None] | None) -> None:
+        self._notify(True)
         try:
             self._player.play(self._tts.synthesize(text), stop)
         except Exception:
@@ -95,3 +110,13 @@ class ReadAloudService:
         finally:
             if on_done:
                 on_done()
+            # Meld kun "slut", hvis ingen nyere oplæsning har overtaget
+            if self._stop is stop:
+                self._notify(False)
+
+    def _notify(self, speaking: bool) -> None:
+        for callback in self._listeners:
+            try:
+                callback(speaking)
+            except Exception:
+                log.exception("Fejl i lytter")
