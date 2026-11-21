@@ -89,6 +89,10 @@ class SuggestionPopup(QFrame):
         layout.setContentsMargins(1, 1, 1, 1)
         layout.setSpacing(0)
         self.rows: list[_Row] = []
+        # Tasterne står nederst, så de ikke er skjulte
+        self.hint = QLabel("↓↑ vælg · Tab tag · Esc luk")
+        self.hint.setStyleSheet("color: gray; font-size: 9pt; padding: 1px 8px 3px 8px;")
+        layout.addWidget(self.hint)
         self._signals = _Signals()
         self._signals.show.connect(self._show)
         self._signals.hide.connect(self.hide)
@@ -106,7 +110,7 @@ class SuggestionPopup(QFrame):
         while len(self.rows) < len(candidates):
             row = _Row(self, len(self.rows))
             self.rows.append(row)
-            layout.addWidget(row)
+            layout.insertWidget(len(self.rows) - 1, row)  # over hjælpelinjen
         for i, row in enumerate(self.rows):
             if i >= len(candidates):
                 row.hide()
