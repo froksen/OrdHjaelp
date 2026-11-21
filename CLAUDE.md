@@ -12,6 +12,13 @@ og Windows. Alt styresystemspecifikt ligger i `src/ordhjaelp/platform/`.
   skifter til mappen over sin egen placering). Push aldrig, når den fejler.
 - **Efter push:** vent på hele CI-resultatet (Linux og Windows), og ret alle fejl i én
   push. Push ikke én rettelse ad gangen.
+- **PR-tekster skrives til mennesker,** også til folk, der ikke programmerer:
+  - Start med et kort afsnit i almindeligt dansk: hvad ændrer sig for eleven eller
+    brugeren, og hvorfor.
+  - Brug korte sætninger og få fagord. Forklar et fagord, hvis det ikke kan undgås.
+  - Tekniske detaljer (filnavne, funktioner, årsager i koden) kommer til sidst under
+    "Teknisk".
+  - Skriv ærligt, hvad der ikke er afprøvet.
 - Spring aldrig en test over for at få grønt. En test, der tester Linux-kode, må springe
   sig selv over uden for Linux (og omvendt), ikke af andre grunde.
 
