@@ -174,7 +174,10 @@ def _tesseract_page(language: str) -> PageOcr:
     def run(image: Path, out: Path, dpi: int) -> None:
         result = subprocess.run(
             [exe, *_tessdata_args(exe), str(image), str(out), "-l", language]
-            + ["--dpi", str(dpi), "pdf"],
+            + ["--dpi", str(dpi)]
+            # Ikke konfigurationsfilen "pdf": den mangler, når tessdata kun har
+            # sprogmodellerne (fx i Windows-installeren)
+            + ["-c", "tessedit_create_pdf=1", "-c", "tessedit_create_txt=0"],
             capture_output=True,
             timeout=300,
             check=False,
