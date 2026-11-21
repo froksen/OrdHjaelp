@@ -7,13 +7,16 @@ skrivemarkøren forsvinde, før der bliver læst op eller dikteret.
 Ren Qt, så den virker på Linux og Windows. Eleven flytter linjen ved at trække i
 håndtaget (⠿), og Ordhjælp husker, hvor den lå, og om den var foldet ind. På Wayland
 må programmer hverken se eller bestemme, hvor deres vinduer ligger. Der huskes kun,
-om linjen var foldet ind, og skrivebordet vælger selv pladsen.
+om linjen var foldet ind. Linjen starter nederst til højre over opgavelinjen: på
+Wayland beder vi skrivebordet om at flytte den dertil (kun KDE Plasma kan det).
 """
 
 from __future__ import annotations
 
 import json
 import logging
+import threading
+import time
 from collections.abc import Callable
 from pathlib import Path
 
@@ -30,6 +33,8 @@ DIM_OPACITY = 0.55  # gennemsigtig, når musen ikke er over linjen
 DIM_DELAY_MS = 2500
 SAVE_DELAY_MS = 500  # gem først, når eleven har sluppet linjen
 MARGIN = 24  # afstand til skærmkanten første gang
+# Wayland: vent lidt, så skrivebordet har vist vinduet, før det flyttes (og prøv igen)
+WAYLAND_PLACE_DELAYS = (0.2, 1.0)
 
 
 def _is_wayland() -> bool:
@@ -116,9 +121,16 @@ class Toolbar(QWidget):
     """Knaplinjen. Knapperne tilføjes med add_button og kan skjules enkeltvis."""
 
     def __init__(
-        self, app_icon: QIcon, menu: QMenu | None = None, state_path: Path | None = None
+        self,
+        app_icon: QIcon,
+        menu: QMenu | None = None,
+        state_path: Path | None = None,
+        wayland_placer: Callable[[str, int], bool] | None = None,
     ) -> None:
-        """:param state_path: filen, hvor placeringen huskes (None: huskes ikke)."""
+        """:param state_path: filen, hvor placeringen huskes (None: huskes ikke).
+        :param wayland_placer: flytter et vindue (titel, margen) nederst til højre på
+            Wayland, hvor move() ignoreres. Kaldes i en baggrundstråd.
+        """
         super().__init__(
             None,
             Qt.WindowType.Tool
@@ -169,6 +181,7 @@ class Toolbar(QWidget):
         self._dim_timer.timeout.connect(lambda: self._set_opacity(DIM_OPACITY))
 
         self._state_path = state_path
+        self._wayland_placer = wayland_placer
         self._placed = False  # først når linjen er placeret, er en flytning elevens egen
         self._save_timer = QTimer(self)
         self._save_timer.setSingleShot(True)
@@ -238,8 +251,20 @@ class Toolbar(QWidget):
             areas = [s.availableGeometry() for s in screens if s is not None]
             self.move(place_on_screen(saved, self.size(), areas))
         self.show()
+        if _is_wayland() and self._wayland_placer is not None:
+            title = self.windowTitle()  # læses her: Qt-objekter hører til hovedtråden
+            threading.Thread(target=self._place_on_wayland, args=(title,), daemon=True).start()
         self._placed = True
         self._dim_timer.start()
+
+    def _place_on_wayland(self, title: str) -> None:
+        """Bed skrivebordet om at lægge linjen nederst til højre over opgavelinjen."""
+        assert self._wayland_placer is not None
+        for delay in WAYLAND_PLACE_DELAYS:
+            time.sleep(delay)
+            if self._wayland_placer(title, MARGIN):
+                return
+        log.info("Skrivebordet kunne ikke flytte knaplinjen ned i hjørnet")
 
     # -- intern ---------------------------------------------------------------
     def _shrink(self) -> None:

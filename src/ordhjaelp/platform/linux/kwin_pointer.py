@@ -2,30 +2,17 @@
 
 På Wayland må almindelige programmer ikke se, hvor musen er. KWin (KDE's
 vindueshåndtering) ved det, og den kan køre små JavaScript-filer. Scriptet
-sender svaret tilbage til os over D-Bus.
-
-NB: Filen bruger bevidst ikke `from __future__ import annotations`, fordi dbus-fast
-læser D-Bus-typerne ("s") direkte fra annotationerne.
+sender svaret tilbage til os over D-Bus (se kwin_script.py).
 """
 
-import asyncio
-import contextlib
 import json
 import logging
-import secrets
-import tempfile
 from dataclasses import dataclass
-from pathlib import Path
 
-from dbus_fast import BusType, Message, MessageType
-from dbus_fast.aio import MessageBus
-from dbus_fast.service import ServiceInterface, method
+from ordhjaelp.platform.linux import kwin_script
+from ordhjaelp.platform.linux.kwin_script import available  # noqa: F401 - bruges af pointer.py
 
 log = logging.getLogger(__name__)
-
-RECEIVER_PATH = "/dk/ordhjaelp/Pointer"
-RECEIVER_IFACE = "dk.ordhjaelp.Pointer"
-TIMEOUT = 3.0
 
 # Gennemgår vinduerne oppefra og finder det øverste, som musen står over.
 SCRIPT = """\
@@ -47,7 +34,7 @@ SCRIPT = """\
       break;
     } catch (e) {}
   }
-  callDBus(%(service)s, %(path)s, %(iface)s, "Report", JSON.stringify(found));
+  %(report)sJSON.stringify(found));
 })();
 """
 
@@ -71,11 +58,7 @@ class PointerInfo:
 
 
 def make_script(service: str) -> str:
-    return SCRIPT % {
-        "service": json.dumps(service),
-        "path": json.dumps(RECEIVER_PATH),
-        "iface": json.dumps(RECEIVER_IFACE),
-    }
+    return SCRIPT % {"report": kwin_script.report_call(service)}
 
 
 def parse_report(data: str) -> PointerInfo:
@@ -90,70 +73,6 @@ def parse_report(data: str) -> PointerInfo:
     )
 
 
-class _Receiver(ServiceInterface):
-    def __init__(self, future: asyncio.Future) -> None:
-        super().__init__(RECEIVER_IFACE)
-        self._future = future
-
-    @method()
-    def Report(self, data: "s"):  # noqa: F821, N802, ANN201 - D-Bus-metode kaldt af KWin
-        if not self._future.done():
-            self._future.set_result(data)
-
-
-async def _call(bus: MessageBus, path: str, iface: str, member: str, sig: str, body: list) -> list:
-    reply = await bus.call(
-        Message(
-            destination="org.kde.KWin",
-            path=path,
-            interface=iface,
-            member=member,
-            signature=sig,
-            body=body,
-        )
-    )
-    if reply is None or reply.message_type == MessageType.ERROR:
-        err = reply.body[0] if reply and reply.body else ""
-        raise RuntimeError(f"KWin {member}: {err}")
-    return reply.body
-
-
 async def locate() -> PointerInfo:
     """Spørg KWin, hvor musen er, og hvilket vindue den står over."""
-    bus = await MessageBus(bus_type=BusType.SESSION).connect()
-    future: asyncio.Future = asyncio.get_running_loop().create_future()
-    bus.export(RECEIVER_PATH, _Receiver(future))
-    plugin = f"ordhjaelp-mus-{secrets.token_hex(4)}"
-    with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False, encoding="utf-8") as f:
-        f.write(make_script(bus.unique_name))
-        script_path = Path(f.name)
-    try:
-        (script_id,) = await _call(
-            bus, "/Scripting", "org.kde.kwin.Scripting", "loadScript", "ss",
-            [str(script_path), plugin],
-        )  # fmt: skip
-        await _call(bus, f"/Scripting/Script{script_id}", "org.kde.kwin.Script", "run", "", [])
-        return parse_report(await asyncio.wait_for(future, TIMEOUT))
-    finally:
-        with contextlib.suppress(Exception):
-            await _call(bus, "/Scripting", "org.kde.kwin.Scripting", "unloadScript", "s", [plugin])
-        script_path.unlink(missing_ok=True)
-        bus.disconnect()
-
-
-async def available() -> bool:
-    bus = await MessageBus(bus_type=BusType.SESSION).connect()
-    try:
-        reply = await bus.call(
-            Message(
-                destination="org.freedesktop.DBus",
-                path="/org/freedesktop/DBus",
-                interface="org.freedesktop.DBus",
-                member="NameHasOwner",
-                signature="s",
-                body=["org.kde.KWin"],
-            )
-        )
-        return bool(reply and reply.message_type != MessageType.ERROR and reply.body[0])
-    finally:
-        bus.disconnect()
+    return parse_report(await kwin_script.run_script(make_script, "mus"))

@@ -12,7 +12,7 @@ from ordhjaelp.platform.linux.kwin_pointer import PointerInfo, make_script, pars
 
 def test_script_reports_back_to_our_dbus_name() -> None:
     script = make_script(":1.42")
-    assert 'callDBus(":1.42", "/dk/ordhjaelp/Pointer", "dk.ordhjaelp.Pointer", "Report"' in script
+    assert 'callDBus(":1.42", "/dk/ordhjaelp/KWin", "dk.ordhjaelp.KWin", "Report"' in script
     assert "workspace.cursorPos" in script
     assert "workspace.stackingOrder" in script
 
