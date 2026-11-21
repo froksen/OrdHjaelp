@@ -48,3 +48,20 @@ def uninstall() -> list[Path]:
             target.unlink()
             removed.append(target)
     return removed
+
+
+def _autostart_path() -> Path:
+    return Path(user_config_dir("autostart")) / DESKTOP_NAME
+
+
+class LinuxAutostart:
+    def is_enabled(self) -> bool:
+        return _autostart_path().exists()
+
+    def set_enabled(self, enabled: bool) -> None:
+        path = _autostart_path()
+        if enabled:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(render_desktop_file(_exec_command()), encoding="utf-8")
+        elif path.exists():
+            path.unlink()

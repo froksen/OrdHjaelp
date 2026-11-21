@@ -37,8 +37,21 @@ class PiperEngine:
         from piper import PiperVoice, SynthesisConfig
 
         self._voice = PiperVoice.load(model_path)
+        self._make_config = SynthesisConfig
+        self.speed = speed
+
+    @property
+    def speed(self) -> float:
+        return self._speed
+
+    @speed.setter
+    def speed(self, value: float) -> None:
+        """Taletempo – kan ændres, mens programmet kører."""
+        if value <= 0:
+            raise ValueError("tempo skal være større end 0")
+        self._speed = value
         # Piper: length_scale > 1 er langsommere. Vores "tempo" er det omvendte.
-        self._config = SynthesisConfig(length_scale=1.0 / speed)
+        self._config = self._make_config(length_scale=1.0 / value)
 
     @property
     def sample_rate(self) -> int:

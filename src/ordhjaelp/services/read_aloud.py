@@ -51,6 +51,14 @@ class ReadAloudService:
         self._listeners.append(callback)
 
     @property
+    def use_clipboard_fallback(self) -> bool:
+        return self._use_clipboard
+
+    @use_clipboard_fallback.setter
+    def use_clipboard_fallback(self, value: bool) -> None:
+        self._use_clipboard = value
+
+    @property
     def speaking(self) -> bool:
         return self._worker is not None and self._worker.is_alive()
 

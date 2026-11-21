@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import os
 import signal
+import sys
 import threading
 from collections.abc import Callable
 
@@ -12,6 +13,8 @@ from ordhjaelp import ipc
 from ordhjaelp.audio.player import Player
 from ordhjaelp.config import Config, voices_dir, whisper_dir
 from ordhjaelp.platform import (
+    PlatformNotSupported,
+    get_autostart,
     get_hotkey_provider,
     get_screen_capture,
     get_selection_provider,
@@ -29,8 +32,9 @@ log = logging.getLogger(__name__)
 def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
     model = ensure_voice(cfg.voice, voices_dir())
     log.info("Indlæser stemmen %s", cfg.voice)
+    tts = PiperEngine(model, speed=cfg.speed)
     service = ReadAloudService(
-        tts=PiperEngine(model, speed=cfg.speed),
+        tts=tts,
         player=Player(),
         selection=get_selection_provider(),
         use_clipboard_fallback=cfg.use_clipboard_fallback,
@@ -39,6 +43,7 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
     screen = _make_screen_reader(service)
     # Handlinger som kun brugerfladen kan udføre (fx vise markeringsoverlay)
     ui_actions: dict[str, Callable[[], None]] = {}
+    restart_requested = threading.Event()
 
     def handle(req: ipc.Request) -> ipc.Response:
         cmd = req.get("cmd")
@@ -99,8 +104,13 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
     if hotkeys:
         threading.Thread(target=start_hotkeys, daemon=True, name="hotkey-setup").start()
 
+    def restart() -> None:
+        restart_requested.set()
+        os.kill(os.getpid(), signal.SIGTERM)  # luk pænt – derefter startes forfra
+
     try:
-        if not (tray and _run_tray(service, dictation, screen, ui_actions)):
+        hooks = _settings_hooks(cfg, tts, service, restart) if tray else None
+        if not (tray and _run_tray(service, dictation, screen, ui_actions, hooks)):
             _wait_for_signal()
     finally:
         log.info("Lukker ned")
@@ -108,6 +118,37 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
         for hk in hk_holder:
             hk.stop()
         server.close()
+
+    if restart_requested.is_set():
+        log.info("Starter forfra med nye indstillinger")
+        os.execv(sys.executable, [sys.executable, *sys.argv])
+
+
+def _settings_hooks(cfg: Config, tts: PiperEngine, service: ReadAloudService, restart):  # noqa: ANN001, ANN202
+    try:
+        from ordhjaelp.ui.settings import SettingsHooks
+    except ImportError:
+        return None
+    try:
+        autostart = get_autostart()
+    except PlatformNotSupported:
+        autostart = None
+
+    def set_speed(speed: float) -> None:
+        tts.speed = speed
+
+    def set_clipboard(enabled: bool) -> None:
+        service.use_clipboard_fallback = enabled
+
+    return SettingsHooks(
+        config=cfg,
+        set_speed=set_speed,
+        say=service.say,
+        set_clipboard_fallback=set_clipboard,
+        set_icon_visible=lambda name, visible: None,  # sættes af brugerfladen
+        restart=restart,
+        autostart=autostart,
+    )
 
 
 def _make_dictation(cfg: Config, service: ReadAloudService) -> DictationService | None:
@@ -160,6 +201,7 @@ def _run_tray(
     dictation: DictationService | None,
     screen: ScreenReadService | None,
     ui_actions: dict[str, Callable[[], None]],
+    hooks=None,  # noqa: ANN001
 ) -> bool:
     """Vis ikonet ved uret. Returnerer False, hvis det ikke kan lade sig gøre."""
     try:
@@ -171,7 +213,7 @@ def _run_tray(
         log.warning("Skrivebordet har ikke noget område til ikoner ved uret")
         return False
     log.info("Ordhjælp kører. Markér tekst og klik på ikonet ved uret.")
-    TrayApp(service, dictation, screen, ui_actions).run()
+    TrayApp(service, dictation, screen, ui_actions, hooks).run()
     return True
 
 

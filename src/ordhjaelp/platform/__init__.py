@@ -5,6 +5,7 @@ from __future__ import annotations
 import sys
 
 from ordhjaelp.platform.base import (
+    Autostart,
     HotkeyProvider,
     PlatformNotSupported,
     ScreenCapture,
@@ -45,7 +46,16 @@ def get_screen_capture() -> ScreenCapture:
     raise PlatformNotSupported(f"Skærmbilleder understøttes endnu ikke på {sys.platform}")
 
 
+def get_autostart() -> Autostart:
+    if sys.platform.startswith("linux"):
+        from ordhjaelp.platform.linux.install import LinuxAutostart
+
+        return LinuxAutostart()
+    raise PlatformNotSupported(f"Autostart understøttes endnu ikke på {sys.platform}")
+
+
 __all__ = [
+    "get_autostart",
     "get_hotkey_provider",
     "get_screen_capture",
     "get_selection_provider",

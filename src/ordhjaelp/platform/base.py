@@ -48,5 +48,10 @@ class ScreenCapture(Protocol):
         ...
 
 
+class Autostart(Protocol):
+    def is_enabled(self) -> bool: ...
+    def set_enabled(self, enabled: bool) -> None: ...
+
+
 class PlatformNotSupported(RuntimeError):
     pass

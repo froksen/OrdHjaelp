@@ -23,6 +23,16 @@ MODEL_ALIASES: dict[str, str] = {
 }
 
 
+# Valgmuligheder i indstillingsvinduet: (kaldenavn, beskrivelse)
+MODEL_CHOICES: list[tuple[str, str]] = [
+    ("dansk-hurtig", "Dansk – hurtig (anbefalet, ca. 250 MB)"),
+    ("dansk-turbo", "Dansk – mere præcis, men langsommere (ca. 1,6 GB)"),
+    ("dansk-stor", "Dansk – CoRal røst, langsom og uden tegnsætning (ca. 3 GB)"),
+    ("hurtig", "Generel – hurtig, men svagere på dansk (ca. 500 MB)"),
+    ("turbo", "Generel – præcis (ca. 1,6 GB)"),
+]
+
+
 def resolve_model(name: str) -> str:
     return MODEL_ALIASES.get(name, name)
 

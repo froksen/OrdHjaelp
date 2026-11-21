@@ -64,6 +64,7 @@ class TrayApp:
         dictation: DictationService | None = None,
         screen: ScreenReadService | None = None,
         ui_actions: dict[str, Callable[[], None]] | None = None,
+        settings=None,  # noqa: ANN001 - SettingsHooks (importeres først ved brug)
     ) -> None:
         self.app = QApplication.instance() or QApplication(sys.argv)
         self.app.setApplicationName("Ordhjælp")
@@ -90,6 +91,13 @@ class TrayApp:
         menu.addAction(self._act_read)
         menu.addAction(self._act_stop)
         menu.addSeparator()
+        self._settings = settings
+        self._settings_dialog = None
+        if settings is not None:
+            settings.set_icon_visible = self.set_icon_visible
+            act_settings = QAction("Indstillinger …", menu)
+            act_settings.triggered.connect(self.open_settings)
+            menu.addAction(act_settings)
         menu.addAction(act_quit)
         self._menu = menu  # behold reference
         self.tray.setContextMenu(menu)
@@ -149,10 +157,11 @@ class TrayApp:
 
     def run(self, on_started: Callable[[], None] | None = None) -> int:
         self.tray.show()
+        icons = self._settings.config.show_icons if self._settings else {}
         if self.mic:
-            self.mic.show()
+            self.mic.setVisible(icons.get("dikter", True))
         if self.screen_icon:
-            self.screen_icon.show()
+            self.screen_icon.setVisible(icons.get("skaerm", True))
         # Lad Ctrl+C/SIGTERM lukke pænt: Python ser kun signaler, når den får lov at køre.
         signal.signal(signal.SIGINT, lambda *_: self.app.quit())
         signal.signal(signal.SIGTERM, lambda *_: self.app.quit())
@@ -168,6 +177,25 @@ class TrayApp:
         # Kun enkeltklik: et dobbeltklik ville ellers starte og stoppe med det samme
         if reason == QSystemTrayIcon.ActivationReason.Trigger:
             self._service.toggle()
+
+    # -- indstillinger --------------------------------------------------
+    def open_settings(self) -> None:
+        from ordhjaelp.ui.settings import SettingsDialog
+
+        if self._settings_dialog is not None:  # allerede åben – vis den igen
+            self._settings_dialog.raise_()
+            self._settings_dialog.activateWindow()
+            return
+        dialog = SettingsDialog(self._settings)
+        dialog.setWindowIcon(self._icon_idle)
+        dialog.finished.connect(lambda _: setattr(self, "_settings_dialog", None))
+        self._settings_dialog = dialog
+        dialog.show()
+
+    def set_icon_visible(self, name: str, visible: bool) -> None:
+        icon = {"dikter": self.mic, "skaerm": self.screen_icon}.get(name)
+        if icon is not None:
+            icon.setVisible(visible)
 
     # -- læs fra skærmen -----------------------------------------------
     def _on_screen_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:
