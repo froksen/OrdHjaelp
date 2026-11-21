@@ -6,7 +6,7 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 import pypdfium2 as pdfium  # noqa: E402
 import pypdfium2.raw as pdfium_c  # noqa: E402
-from PySide6.QtGui import QColor, QFont, QImage, QPainter  # noqa: E402
+from PySide6.QtGui import QImage  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 from ordhjaelp.ocr.pdf import (  # noqa: E402
@@ -26,29 +26,40 @@ def app():
     return QApplication.instance() or QApplication([])
 
 
-def _text_as_image(text: str) -> QImage:
-    """Tekst som pixels – sådan ser en scannet side ud for en PDF."""
-    image = QImage(1100, 300, QImage.Format.Format_RGB888)
-    image.fill(QColor("white"))
-    painter = QPainter(image)
-    font = QFont("DejaVu Sans")
-    font.setPixelSize(50)
-    painter.setFont(font)
-    painter.setPen(QColor("black"))
-    painter.drawText(30, 150, text)
-    painter.end()
-    return image
-
-
-def _add_text(doc, page, text):
+def _add_text(doc, page, text, size=14.0, x=72, y=700):
     """Rigtig tekst med PDF'ens indbyggede Helvetica – kræver ingen skrifttyper på maskinen."""
-    obj = pdfium_c.FPDFPageObj_NewTextObj(doc, b"Helvetica", 14.0)
+    obj = pdfium_c.FPDFPageObj_NewTextObj(doc, b"Helvetica", size)
     utf16 = (text + "\0").encode("utf-16-le")
     assert pdfium_c.FPDFText_SetText(
         obj, (ctypes.c_ushort * (len(utf16) // 2)).from_buffer_copy(utf16)
     )
-    pdfium_c.FPDFPageObj_Transform(obj, 1, 0, 0, 1, 72, 700)
+    pdfium_c.FPDFPageObj_Transform(obj, 1, 0, 0, 1, x, y)
     pdfium_c.FPDFPage_InsertObject(page, obj)
+
+
+def _text_as_image(text: str) -> QImage:
+    """Tekst som pixels – sådan ser en scannet side ud for en PDF.
+
+    Tegnes med pdfium, ikke Qt: kører Qt uden skærm (offscreen) på Windows, findes
+    der ingen skrifttyper, og så bliver billedet tomt.
+    """
+    doc = pdfium.PdfDocument.new()
+    try:
+        page = doc.new_page(550, 150)
+        _add_text(doc, page, text, size=25, x=15, y=65)
+        page.gen_content()
+        bitmap = page.render(scale=2, rev_byteorder=True)
+        pixels = bitmap.to_numpy()
+        h, w = pixels.shape[:2]
+        fmt = QImage.Format.Format_RGB888
+        if pixels.shape[2] == 4:
+            fmt = QImage.Format.Format_RGBA8888
+        image = QImage(pixels.data, w, h, bitmap.stride, fmt).copy()  # copy: bitmap lukkes
+        bitmap.close()
+    finally:
+        doc.close()
+    assert pixels.min() < 100, "billedet er tomt – teksten blev ikke tegnet"
+    return image
 
 
 def _add_image(doc, page, text, tmp):
