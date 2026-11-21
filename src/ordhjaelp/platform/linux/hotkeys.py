@@ -23,6 +23,9 @@ DESCRIPTIONS = {
     "stop": "Stop oplæsning",
     "dikter": "Diktér: start/stop optagelse",
     "skaerm": "Læs tekst fra skærmen (træk en firkant)",
+    "laes_ord": "Læs ordet under musen",
+    "laes_saetning": "Læs sætningen under musen",
+    "laes_herfra": "Læs herfra (fra musen og videre)",
 }
 
 

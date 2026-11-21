@@ -27,6 +27,9 @@ Requires:       ibus
 Requires:       ibus-panel
 Requires:       python3-gobject
 Requires:       xdg-desktop-portal
+# Læs under musen: tilgængelighedsbussen (Wayland og X11) og musens position på X11
+Requires:       at-spi2-core
+Recommends:     xdotool
 
 %description
 Ordhjælp er et gratis læse- og skriveværktøj (LST) til danske elever.

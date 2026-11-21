@@ -31,6 +31,18 @@ class SelectionProvider(Protocol):
         ...
 
 
+class PointerText(Protocol):
+    """Teksten under musen (læs under musen)."""
+
+    def prepare(self) -> None:
+        """Gør klar, fx ved at bede programmerne om at slå tilgængelighed til."""
+        ...
+
+    def text_at_pointer(self, unit: str) -> str | None:
+        """Ordet ("ord"), sætningen ("saetning") eller resten ("herfra") under musen."""
+        ...
+
+
 class HotkeyProvider(Protocol):
     def start(self, bindings: dict[str, str], on_activated: Callable[[str], None]) -> None:
         """Registrér globale genveje.
