@@ -14,6 +14,9 @@ def test_default_config_parses() -> None:
         "stop": "CTRL+ALT+S",
         "dikter": "CTRL+ALT+D",
         "skaerm": "CTRL+ALT+B",
+        "laes_ord": "CTRL+ALT+1",
+        "laes_saetning": "CTRL+ALT+2",
+        "laes_herfra": "CTRL+ALT+3",
     }
     assert cfg.dictation_enabled is True
     assert cfg.dictation_model == "dansk-hurtig"
@@ -28,6 +31,9 @@ def test_partial_config_keeps_defaults() -> None:
         "stop": "CTRL+ALT+S",
         "dikter": "CTRL+ALT+D",
         "skaerm": "CTRL+ALT+B",
+        "laes_ord": "CTRL+ALT+1",
+        "laes_saetning": "CTRL+ALT+2",
+        "laes_herfra": "CTRL+ALT+3",
     }
 
 
@@ -60,3 +66,9 @@ def test_roundtrip_keeps_all_values() -> None:
 def test_strings_with_quotes_are_escaped() -> None:
     cfg = Config(voice='mærkelig "stemme"')
     assert Config.from_toml(cfg.to_toml()).voice == 'mærkelig "stemme"'
+
+
+def test_read_at_pointer_is_off_by_default_and_roundtrips() -> None:
+    assert Config.from_toml(DEFAULT_CONFIG).read_at_pointer is False
+    assert Config.from_toml(Config(read_at_pointer=True).to_toml()).read_at_pointer is True
+    assert Config.from_toml("[oplaesning]\nlaes_under_musen = true\n").read_at_pointer
