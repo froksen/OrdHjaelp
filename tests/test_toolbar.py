@@ -255,3 +255,20 @@ def test_pdf_button_can_be_hidden_and_shown_in_tray_view(app) -> None:
     tray.set_icon_visible("pdf", False)
     assert not tray.pdf_icon.isVisible()
     assert tray.toolbar.buttons["pdf"].isHidden()
+
+
+def test_fold_and_unfold_resizes_the_window_itself(app) -> None:
+    """Vinduet får en fast størrelse. På Wayland beholdt skrivebordet ellers den gamle
+    bredde, og den foldede fane kunne ikke foldes ud med et klik."""
+    tray, *_ = make_tray()
+    bar = tray.toolbar
+    wide = bar.size()
+    bar._fold.click()
+    assert bar.folded
+    assert bar.minimumSize() == bar.maximumSize() == bar.size()
+    assert bar.width() < wide.width()
+    assert bar._fold.text() == "›" and not bar._fold.icon().isNull()
+    bar._fold.click()
+    assert not bar.folded and bar.size() == wide
+    assert all(not b.isHidden() for b in bar.buttons.values())
+    bar.hide()
