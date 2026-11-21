@@ -19,8 +19,10 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QScrollArea,
     QSlider,
     QVBoxLayout,
+    QWidget,
 )
 
 from ordhjaelp.config import Config, save_config
@@ -30,7 +32,7 @@ from ordhjaelp.stt.whisper_engine import MODEL_CHOICES
 log = logging.getLogger(__name__)
 
 PREVIEW_TEXT = "Hej! Sådan lyder jeg, når jeg læser op for dig."
-KEYS_HELP_LINUX = "Tastaturgenveje ændres i Systemindstillinger → Tastaturgenveje → Ordhjælp."
+KEYS_HELP_LINUX = "Tastaturgenveje ændres i Systemindstillinger →\nTastaturgenveje → Ordhjælp."
 KEYS_HELP_WINDOWS = "Tastaturgenveje ændres under [genveje] i indstillingsfilen (config.toml)."
 
 
@@ -71,8 +73,10 @@ class SettingsDialog(QDialog):
         self._original = copy.deepcopy(hooks.config)
         cfg = hooks.config
         self.setWindowTitle("Ordhjælp – indstillinger")
-        self.setMinimumWidth(480)
-        layout = QVBoxLayout(self)
+        # Indholdet kan rulles: på en lille skærm (fx 1366x768 med 125 % skalering)
+        # er der ikke plads til det hele, og så ville Qt klemme tekst sammen eller skjule den
+        content = QWidget()
+        layout = QVBoxLayout(content)
 
         # -- Oplæsning --------------------------------------------------
         box = QGroupBox("Oplæsning")
@@ -108,8 +112,8 @@ class SettingsDialog(QDialog):
         self.read_at_pointer = QCheckBox("Læs under musen med genveje")
         self.read_at_pointer.setChecked(cfg.read_at_pointer)
         form.addRow(self.read_at_pointer)
-        # Faste linjeskift: QFormLayout giver ikke en QLabel med wordWrap nok højde,
-        # så teksten blev klippet over
+        # Faste linjeskift, aldrig setWordWrap: en QLabel med automatisk linjeskift
+        # får Qt til at gøre vinduet for smalt, så tekst klippes eller forsvinder
         note = QLabel(
             "Peg med musen og tryk Ctrl+Alt+1 (ordet), Ctrl+Alt+2 (sætningen)\n"
             "eller Ctrl+Alt+3 (herfra og videre). Virker fx i Firefox og LibreOffice."
@@ -178,7 +182,6 @@ class SettingsDialog(QDialog):
         layout.addWidget(self.autostart)
 
         keys = QLabel(KEYS_HELP_WINDOWS if sys.platform == "win32" else KEYS_HELP_LINUX)
-        keys.setWordWrap(True)
         keys.setStyleSheet("color: gray")
         layout.addWidget(keys)
 
@@ -189,8 +192,38 @@ class SettingsDialog(QDialog):
         buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Annullér")
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
-        layout.addWidget(buttons)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setWidget(content)
+        scrollbar = scroll.verticalScrollBar().sizeHint().width()
+        scroll.setMinimumWidth(max(480, content.sizeHint().width()) + scrollbar)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.addWidget(scroll, 1)
+        bottom = QVBoxLayout()
+        bottom.setContentsMargins(11, 0, 11, 11)
+        bottom.addWidget(buttons)
+        outer.addLayout(bottom)
+        self._content = content
+        self._scroll = scroll
+        self._bottom = bottom
+        self._outer = outer
+        self._fit_to_screen()
         self._speed_changed(self.speed.value())
+
+    def _fit_to_screen(self) -> None:
+        """Så højt som indholdet, men aldrig højere end skærmen."""
+        wanted = (
+            self._content.sizeHint().height()
+            + self._outer.spacing()
+            + self._bottom.sizeHint().height()
+        )
+        screen = self.screen()
+        if screen is not None:
+            wanted = min(wanted, int(screen.availableGeometry().height() * 0.9))
+        self.resize(self.minimumSizeHint().width(), wanted)
 
     def _speed_changed(self, value: int) -> None:
         speed = value / 100
