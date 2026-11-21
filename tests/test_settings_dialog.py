@@ -146,6 +146,22 @@ class _ReadySetup:
         return False
 
 
+def test_settings_are_split_into_tabs(app, hooks) -> None:
+    """Fire faner, så der ikke er så meget at overskue ad gangen."""
+    h, _calls, _tmp = hooks
+    d = SettingsDialog(h)
+    titles = [d._tabs.tabText(i) for i in range(d._tabs.count())]
+    assert titles == ["Læs op", "Skriv", "Knapper", "Start og genveje"]
+
+    def tab_of(widget):
+        return next(i for i, (_, c) in enumerate(d._pages) if c.isAncestorOf(widget))
+
+    assert tab_of(d.speed) == tab_of(d.read_at_pointer) == 0
+    assert tab_of(d.dictation) == tab_of(d.prediction) == 1
+    assert tab_of(d.view_toolbar) == tab_of(d.icon_pdf) == tab_of(d.pdf_ocr) == 2
+    assert tab_of(d.autostart) == 3
+
+
 @pytest.mark.parametrize("typing", [False, True])
 @pytest.mark.parametrize("small", [False, True])
 def test_no_label_is_clipped(app, hooks, small: bool, typing: bool) -> None:
@@ -167,20 +183,20 @@ def test_no_label_is_clipped(app, hooks, small: bool, typing: bool) -> None:
     app.processEvents()
     try:
         assert d.width() >= d.minimumSizeHint().width()
-        # Kun rullebjælke, når der ikke er plads. Om indholdet kan være på testskærmen
-        # (800 px) afhænger af skrifttypen: Noto Sans på Fedora er højere end Ubuntus.
-        no_room = d._scroll.viewport().height() < d._content.sizeHint().height()
-        assert no_room or not small
-        assert d._scroll.verticalScrollBar().isVisible() == no_room
-        for label in d.findChildren(QLabel):
-            assert not label.wordWrap(), f"brug faste linjeskift: {label.text()!r}"
-            if not label.isVisible() or not label.text():
-                continue
-            if label.wordWrap():
-                needed = label.heightForWidth(label.width())
-            else:
-                needed = label.sizeHint().height()
+        for index, (scroll, content) in enumerate(d._pages):
+            d._tabs.setCurrentIndex(index)
+            app.processEvents()
+            # Kun rullebjælke, når der ikke er plads. Om indholdet kan være på testskærmen
+            # (800 px) afhænger af skrifttypen: Noto Sans på Fedora er højere end Ubuntus.
+            no_room = scroll.viewport().height() < content.sizeHint().height()
+            assert scroll.verticalScrollBar().isVisible() == no_room
+            for label in content.findChildren(QLabel):
+                assert not label.wordWrap(), f"brug faste linjeskift: {label.text()!r}"
+                if not label.isVisible() or not label.text():
+                    continue
                 assert label.width() >= label.sizeHint().width(), label.text()
-            assert label.height() >= needed, f"klippet: {label.text()!r}"
+                assert label.height() >= label.sizeHint().height(), f"klippet: {label.text()!r}"
+        if small:  # mindst én fane er for høj til 300 punkter og skal rulles
+            assert any(s.viewport().height() < c.sizeHint().height() for s, c in d._pages)
     finally:
         d.close()

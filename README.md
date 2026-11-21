@@ -91,9 +91,17 @@ usynligt tekstlag oven på siderne. Siderne ser ud som før.
 
 ### Indstillinger
 
-Klik på **⋯** i knaplinjen (eller højreklik på det blå ikon ved uret, hvis du bruger ikoner) → **Indstillinger**: taletempo (med "Prøv stemmen"),
-læs ved markering, diktering og talemodel, ordforslag, læs mens du skriver, knaplinje eller ikoner ved uret, hvilke knapper der vises, og
-autostart ved login. Indstillingerne gemmes i `~/.config/ordhjaelp/config.toml`.
+Klik på **⋯** i knaplinjen (eller højreklik på det blå ikon ved uret, hvis du bruger ikoner)
+→ **Indstillinger**. Indstillingerne ligger i fire faner:
+
+| Fane | Indhold |
+|---|---|
+| **Læs op** | Taletempo (med "Prøv stemmen"), læs ved markering, læs under musen, udklipsholderen |
+| **Skriv** | Diktering og talemodel, ordforslag, læs mens du skriver |
+| **Knapper** | Knaplinje eller ikoner ved uret, og hvilke knapper der vises |
+| **Start og genveje** | Autostart ved login og oversigt over genvejene |
+
+Indstillingerne gemmes i `~/.config/ordhjaelp/config.toml`.
 
 ## Installation (Fedora KDE og GNOME)
 
