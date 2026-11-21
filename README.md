@@ -123,16 +123,23 @@ Derefter:
 
 ## Installation (Windows, prøveudgave)
 
-Hent **Ordhjaelp-<version>-Setup.exe** under [Releases](https://github.com/froksen/OrdHj-lp/releases),
-og dobbeltklik på den. Installationen kræver **ikke administrator**. Ordhjælp installeres
-kun for den bruger, der er logget ind (i `%LOCALAPPDATA%\Programs\Ordhjaelp`).
+Hent Ordhjælp under [Releases](https://github.com/froksen/OrdHj-lp/releases). Der er to udgaver:
+
+- **Ordhjaelp-<version>-Windows.zip**: pak den ud (højreklik → *Udpak alle …*), og dobbeltklik på
+  `Ordhjaelp.exe` i mappen. Der skal ikke installeres noget. Den virker også på pc'er med
+  Smart App Control, hvor installeren bliver blokeret, fordi den ikke er signeret.
+- **Ordhjaelp-<version>-Setup.exe**: en almindelig installer med genvej i startmenuen og
+  afinstallation under Windows' indstillinger.
+
+Ingen af udgaverne kræver **administrator**. Installeren installerer kun for den bruger, der er
+logget ind (i `%LOCALAPPDATA%\Programs\Ordhjaelp`).
 
 - Hunspell (dansk ordbog) og Tesseract (læs fra skærmen) følger med. Der skal ikke
   installeres andet.
 - Første gang hentes stemmen og talegenkendelsen (ca. 300 MB).
-- Installeren er ikke signeret endnu. Windows viser derfor "Windows beskyttede din pc".
+- Ordhjælp er ikke signeret endnu. Windows kan derfor vise "Windows beskyttede din pc".
   Klik på **Flere oplysninger** og derefter **Kør alligevel**. Er Smart App Control slået til,
-  kan Windows blokere programmet helt.
+  blokerer Windows installeren. Brug så zip-filen.
 
 Fra kildekoden (til udvikling):
 
@@ -247,7 +254,7 @@ ORDHJAELP_ATSPI_TEST=1 uv run pytest tests/integration/test_atspi.py   # læs un
 på udgivelsen. Lokalt (kræver Inno Setup 6, og MSYS2 for at få Hunspell og Tesseract med):
 
 ```powershell
-powershell -File packaging\windows\build-installer.ps1                            # dist\Ordhjaelp-<version>-Setup.exe
+powershell -File packaging\windows\build-installer.ps1                            # Setup.exe og Windows.zip i dist\
 powershell -File packaging\windows\build-installer.ps1 -SkipInstaller -NoTools   # kun dist\Ordhjaelp\
 ```
 
