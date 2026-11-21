@@ -37,6 +37,9 @@ datas += copy_metadata("hf_xet")
 
 binaries = []
 binaries += collect_dynamic_libs("ctranslate2")  # talegenkendelse
+# Søgbare PDF'er: pdfium.dll og versionsfilerne, som pypdfium2 læser ved import
+binaries += collect_dynamic_libs("pypdfium2_raw")
+datas += collect_data_files("pypdfium2_raw") + collect_data_files("pypdfium2")
 
 a = Analysis(  # noqa: F821
     [str(HERE / "launcher.py")],

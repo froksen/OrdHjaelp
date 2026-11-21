@@ -80,3 +80,9 @@ def test_read_at_pointer_is_off_by_default_and_roundtrips() -> None:
     assert Config.from_toml(DEFAULT_CONFIG).read_at_pointer is False
     assert Config.from_toml(Config(read_at_pointer=True).to_toml()).read_at_pointer is True
     assert Config.from_toml("[oplaesning]\nlaes_under_musen = true\n").read_at_pointer
+
+
+def test_pdf_ocr_is_off_by_default_and_roundtrips() -> None:
+    assert Config.from_toml(DEFAULT_CONFIG).pdf_ocr_enabled is False
+    assert Config.from_toml(Config(pdf_ocr_enabled=True).to_toml()).pdf_ocr_enabled is True
+    assert Config.from_toml("[pdf]\nsoegbar = true\n").pdf_ocr_enabled
