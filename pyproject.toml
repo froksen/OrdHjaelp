@@ -32,6 +32,10 @@ dev = [
     "pytest>=9.2.0",
     "ruff>=0.17.6",
 ]
+# Windows-installeren (packaging/windows/build-installer.ps1)
+windows-build = [
+    "pyinstaller>=6.16; sys_platform == 'win32'",
+]
 
 [tool.ruff]
 line-length = 100

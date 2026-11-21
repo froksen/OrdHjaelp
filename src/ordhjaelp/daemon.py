@@ -181,8 +181,20 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
 
     if restart_requested.is_set():
         log.info("Starter forfra med nye indstillinger")
-        # Altid via "-m ordhjaelp": virker både fra udviklingsmappen og fra RPM-installationen
-        os.execv(sys.executable, [sys.executable, "-m", "ordhjaelp", *sys.argv[1:]])
+        os.execv(sys.executable, restart_command())
+
+
+def restart_command(
+    executable: str = sys.executable,
+    argv: list[str] | None = None,
+    frozen: bool = bool(getattr(sys, "frozen", False)),
+) -> list[str]:
+    """Kommandoen, der starter Ordhjælp igen med de samme valg."""
+    args = sys.argv[1:] if argv is None else argv
+    if frozen:  # installeret med Windows-installeren: programmet er selv en .exe
+        return [executable, *args]
+    # Ellers via "-m ordhjaelp": virker både fra udviklingsmappen og fra RPM-installationen
+    return [executable, "-m", "ordhjaelp", *args]
 
 
 def _make_read_on_select(selection, service: ReadAloudService) -> Callable[[bool], None]:  # noqa: ANN001
@@ -314,9 +326,12 @@ def _make_screen_reader(service: ReadAloudService) -> ScreenReadService | None:
     from ordhjaelp.ocr.tesseract import TesseractOCR
 
     if not TesseractOCR.available():
-        log.warning(
-            "Læs fra skærmen kræver Tesseract: sudo dnf install tesseract tesseract-langpack-dan"
+        how = (
+            "winget install UB-Mannheim.TesseractOCR"
+            if sys.platform == "win32"
+            else "sudo dnf install tesseract tesseract-langpack-dan"
         )
+        log.warning("Læs fra skærmen kræver Tesseract: %s", how)
     try:
         capture = get_screen_capture()
     except Exception as exc:  # noqa: BLE001

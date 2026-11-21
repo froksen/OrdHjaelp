@@ -30,13 +30,26 @@ class Entry:
     zipf: float  # hyppighed, 1 (sjælden) – 7 (meget hyppig)
 
 
+def hunspell_command() -> list[str] | None:
+    """Hunspell med dansk ordbog: fra Windows-installeren eller systemet (None = mangler)."""
+    from ordhjaelp import bundled
+
+    exe = bundled.tool("hunspell")
+    if exe is not None:  # ordbogen ligger ved siden af programmet
+        return [str(exe), "-d", str(exe.parent / "da_DK")]
+    if shutil.which("hunspell") is None:
+        return None
+    return ["hunspell", "-d", "da_DK"]
+
+
 def _hunspell_accepts(words: list[str]) -> set[str] | None:
     """Ord, som den danske Hunspell-ordbog godkender (None hvis Hunspell mangler)."""
-    if shutil.which("hunspell") is None:
+    command = hunspell_command()
+    if command is None:
         return None
     try:
         result = subprocess.run(
-            ["hunspell", "-d", "da_DK", "-G", "-i", "utf-8"],
+            [*command, "-G", "-i", "utf-8"],
             input="\n".join(words).encode(),
             capture_output=True,
             timeout=120,
@@ -84,17 +97,24 @@ def build_entries() -> list[Entry]:
 def load_entries(cache: Path) -> list[Entry]:
     try:
         raw = json.loads(cache.read_text(encoding="utf-8"))
-        if raw.get("version") == LEXICON_VERSION:
+        # En ordliste uden Hunspell bygges igen, når Hunspell er kommet til
+        stale = not raw.get("hunspell", True) and hunspell_command() is not None
+        if raw.get("version") == LEXICON_VERSION and not stale:
             return [Entry(w, z) for w, z in raw["words"]]
     except (OSError, ValueError, KeyError):
         pass
     log.info("Bygger ordliste …")
+    filtered = hunspell_command() is not None
     entries = build_entries()
     cache.parent.mkdir(parents=True, exist_ok=True)
     tmp = cache.with_suffix(".tmp")
     tmp.write_text(
         json.dumps(
-            {"version": LEXICON_VERSION, "words": [[e.word, round(e.zipf, 2)] for e in entries]},
+            {
+                "version": LEXICON_VERSION,
+                "hunspell": filtered,
+                "words": [[e.word, round(e.zipf, 2)] for e in entries],
+            },
             ensure_ascii=False,
         ),
         encoding="utf-8",

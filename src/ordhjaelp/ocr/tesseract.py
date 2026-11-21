@@ -2,7 +2,7 @@
 
 Kalder tesseract-programmet direkte (ingen ekstra Python-pakker).
 Linux:   sudo dnf install tesseract tesseract-langpack-dan
-Windows/macOS: Tesseract-installeren (senere i Ordhjælps egen installer).
+Windows: følger med Ordhjælps installer (ellers: winget install UB-Mannheim.TesseractOCR).
 """
 
 from __future__ import annotations
@@ -33,7 +33,7 @@ class TesseractOCR:
             raise OcrUnavailable("Tesseract er ikke installeret")
         result = subprocess.run(
             # --psm 6: én blok tekst – passer godt til et udsnit, eleven har markeret
-            [exe, "stdin", "stdout", "-l", self._language, "--psm", "6"],
+            [exe, *_tessdata_args(exe), "stdin", "stdout", "-l", self._language, "--psm", "6"],
             input=png,
             capture_output=True,
             timeout=60,
@@ -51,6 +51,10 @@ class TesseractOCR:
 
 def find_tesseract() -> str | None:
     """Tesseract-programmet. På Windows lægger installeren det sjældent i PATH."""
+    from ordhjaelp import bundled
+
+    if (exe := bundled.tool("tesseract")) is not None:  # følger med Ordhjælps installer
+        return str(exe)
     found = shutil.which("tesseract")
     if found or sys.platform != "win32":
         return found
@@ -64,6 +68,16 @@ def find_tesseract() -> str | None:
             if candidate.exists():
                 return str(candidate)
     return None
+
+
+def _tessdata_args(exe: str) -> list[str]:
+    """Sprogmodellerne til Tesseract fra Ordhjælps installer ligger ved siden af programmet."""
+    tessdata = Path(exe).parent / "tessdata"
+    from ordhjaelp import bundled
+
+    if bundled.tools_dir() is not None and tessdata.is_dir():
+        return ["--tessdata-dir", str(tessdata)]
+    return []
 
 
 def clean_ocr_text(text: str) -> str:

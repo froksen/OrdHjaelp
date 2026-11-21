@@ -123,7 +123,18 @@ Derefter:
 
 ## Installation (Windows, prøveudgave)
 
-Windows-udgaven er ny og endnu ikke afprøvet bredt. Der er ingen installer endnu.
+Hent **Ordhjaelp-<version>-Setup.exe** under [Releases](https://github.com/froksen/OrdHj-lp/releases),
+og dobbeltklik på den. Installationen kræver **ikke administrator**. Ordhjælp installeres
+kun for den bruger, der er logget ind (i `%LOCALAPPDATA%\Programs\Ordhjaelp`).
+
+- Hunspell (dansk ordbog) og Tesseract (læs fra skærmen) følger med. Der skal ikke
+  installeres andet.
+- Første gang hentes stemmen og talegenkendelsen (ca. 300 MB).
+- Installeren er ikke signeret endnu. Windows viser derfor "Windows beskyttede din pc".
+  Klik på **Flere oplysninger** og derefter **Kør alligevel**. Er Smart App Control slået til,
+  kan Windows blokere programmet helt.
+
+Fra kildekoden (til udvikling):
 
 ```powershell
 winget install astral-sh.uv
@@ -148,7 +159,7 @@ Ordforslag virker ikke i programmer, der kører som administrator (det tillader 
 Nogle programmer (fx Chrome og Word) fortæller ikke, hvor markøren står. Så vises
 forslagene ved musen i stedet.
 
-Kommer senere på Windows: læs ved markering, læs under musen og en installer.
+Kommer senere på Windows: læs ved markering og læs under musen.
 Bemærk: udklipsholderens historik (Win+V) kan vise den tekst, der er læst op.
 
 ## Kommandoer
@@ -232,6 +243,14 @@ ORDHJAELP_IBUS_TEST=1 uv run pytest tests/integration   # IBus-test med privat i
 ORDHJAELP_ATSPI_TEST=1 uv run pytest tests/integration/test_atspi.py   # læs under musen (Xvfb + AT-SPI)
 ```
 
+**Windows-installeren** bygges af GitHub Actions ved en tag (`v0.3.0`), og den lægges
+på udgivelsen. Lokalt (kræver Inno Setup 6, og MSYS2 for at få Hunspell og Tesseract med):
+
+```powershell
+powershell -File packaging\windows\build-installer.ps1                            # dist\Ordhjaelp-<version>-Setup.exe
+powershell -File packaging\windows\build-installer.ps1 -SkipInstaller -NoTools   # kun dist\Ordhjaelp\
+```
+
 **Hjælp med ordforslag:** Den bedste måde at gøre ordforslagene bedre på er rigtige
 stavefejl fra elever. Tilføj dem til [`tests/ordmotor/fejlkorpus.tsv`](tests/ordmotor/fejlkorpus.tsv)
 (det skrevne, tabulator, det rigtige ord) – testen viser, hvilke der ikke bliver fanget.
@@ -246,7 +265,8 @@ Ordhjælp er under udvikling og afprøves på Fedora KDE Plasma (Wayland).
 - [x] Velkomstvindue ved første start: vælg og hent sprogmodeller; administrér dem i indstillingerne
 - [x] Windows: læs op, diktering, læs fra skærmen, genveje, autostart (prøveudgave)
 - [x] Windows: sprogmodeller, ordforslag, læs mens du skriver (prøveudgave)
-- [ ] Windows: læs ved markering, læs under musen, installer
+- [x] Windows: installer uden administrator (prøveudgave)
+- [ ] Windows: læs ved markering, læs under musen, signeret installer
 - [ ] macOS
 
 ## Licens

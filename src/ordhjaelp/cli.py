@@ -43,6 +43,7 @@ def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+        **_log_target(),
     )
     for noisy in ("httpx", "httpx2", "huggingface_hub", "faster_whisper"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
@@ -115,6 +116,20 @@ def main(argv: list[str] | None = None) -> int:
         print(reply.get("fejl", "Kunne ikke udføre kommandoen"), file=sys.stderr)
         return 1
     return 0
+
+
+def _log_target() -> dict:
+    """Uden konsol (fx Ordhjaelp.exe fra installeren) skrives loggen i en fil."""
+    if sys.stderr is not None:
+        return {}
+    from logging.handlers import RotatingFileHandler
+
+    from ordhjaelp.config import data_dir
+
+    path = data_dir() / "ordhjaelp.log"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    handler = RotatingFileHandler(path, maxBytes=1_000_000, backupCount=1, encoding="utf-8")
+    return {"handlers": [handler]}
 
 
 if __name__ == "__main__":
