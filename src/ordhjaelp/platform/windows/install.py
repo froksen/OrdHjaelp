@@ -40,7 +40,8 @@ class WindowsAutostart:
     def set_enabled(self, enabled: bool) -> None:
         import winreg
 
-        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY, 0, winreg.KEY_SET_VALUE) as key:
+        # CreateKeyEx: hos en helt ny bruger findes Run-nøglen ikke endnu
+        with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, RUN_KEY, 0, winreg.KEY_SET_VALUE) as key:
             if enabled:
                 winreg.SetValueEx(key, VALUE_NAME, 0, winreg.REG_SZ, _command())
             else:

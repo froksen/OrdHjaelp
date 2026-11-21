@@ -33,6 +33,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
+      - name: Hunspell med dansk ordbog (ordforslag bruger den til navne som København)
+        shell: pwsh
+        run: |
+          C:\msys64\usr\bin\pacman.exe -Sy --noconfirm --needed mingw-w64-x86_64-hunspell
+          $dict = Join-Path $env:RUNNER_TEMP "hunspell"
+          New-Item -ItemType Directory -Force -Path $dict | Out-Null
+          foreach ($ext in "aff", "dic") {
+            Invoke-WebRequest -OutFile (Join-Path $dict "da_DK.$ext") `
+              -Uri "https://raw.githubusercontent.com/LibreOffice/dictionaries/master/da_DK/da_DK.$ext"
+          }
+          "C:\msys64\mingw64\bin" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
+          "DICPATH=$dict" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+      - run: hunspell -D
+        continue-on-error: true
       - run: uv sync
       - run: uv run pytest -q
         env:
