@@ -211,3 +211,15 @@ def test_first_run_fits_small_school_screen(app) -> None:
     dialog = FirstRunDialog(FakeStore(), Config(), FakeAutostart())
     # 1366x768 med 125 % skalering giver ca. 614 punkter i højden
     assert dialog.minimumSizeHint().height() <= 600
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="ikonerne ved uret: kun Windows")
+def test_first_run_shows_how_to_show_tray_icons(app, monkeypatch) -> None:
+    opened = []
+    monkeypatch.setattr(tray_help.TrayIconsHelpDialog, "exec", lambda self: opened.append(self))
+    dialog = FirstRunDialog(FakeStore(), Config())
+    basics = dialog.basics
+    assert basics.tray_icons_how.isVisibleTo(dialog)
+    assert "^" in basics.tray_icons_note.text()
+    basics.tray_icons_how.click()
+    assert len(opened) == 1
