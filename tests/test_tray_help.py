@@ -20,7 +20,7 @@ def app():
 
 def test_old_setting_from_0_2_is_ignored() -> None:
     cfg = Config.from_toml("[ikoner]\ndikter = false\naltid_synlige = true\n")
-    assert cfg.show_icons == {"dikter": False, "skaerm": True}
+    assert cfg.show_icons == {"dikter": False, "skaerm": True, "pdf": True}
     assert "altid_synlige" not in cfg.to_toml()
 
 

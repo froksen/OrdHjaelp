@@ -91,7 +91,8 @@ def test_toolbar_view_hides_extra_tray_icons(app) -> None:
     tray, *_ = make_tray(VIEW_TOOLBAR)
     assert tray.toolbar.isVisible()
     assert not tray.mic.isVisible() and not tray.screen_icon.isVisible()
-    assert set(tray.toolbar.buttons) == {"laes", "dikter", "skaerm"}
+    assert not tray.pdf_icon.isVisible()
+    assert set(tray.toolbar.buttons) == {"laes", "dikter", "skaerm", "pdf"}
     tray.toolbar.hide()
 
 
@@ -230,3 +231,26 @@ def test_without_wayland_qt_places_bar_itself(app, monkeypatch) -> None:
     bar.show_at_saved_place()
     time.sleep(0.05)
     assert calls == []
+
+
+def test_pdf_button_is_shown_by_default_and_opens_pdf_ocr(app, monkeypatch) -> None:
+    """Knappen til at gøre en scannet PDF søgbar (OCR) er der fra start."""
+    assert Config().show_icons["pdf"] is True
+    from ordhjaelp.ui import pdf_ocr
+
+    tray, *_ = make_tray()
+    opened = []
+    monkeypatch.setattr(pdf_ocr, "choose_pdf", lambda: opened.append(True))  # eleven fortryder
+    button = tray.toolbar.buttons["pdf"]
+    assert not button.isHidden()
+    button.click()
+    assert opened == [True]
+    tray.toolbar.hide()
+
+
+def test_pdf_button_can_be_hidden_and_shown_in_tray_view(app) -> None:
+    tray, *_ = make_tray(VIEW_TRAY)
+    assert tray.pdf_icon.isVisible()
+    tray.set_icon_visible("pdf", False)
+    assert not tray.pdf_icon.isVisible()
+    assert tray.toolbar.buttons["pdf"].isHidden()
