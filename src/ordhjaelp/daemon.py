@@ -17,18 +17,24 @@ from ordhjaelp.platform import (
     get_autostart,
     get_hotkey_provider,
     get_input_method,
+    get_pointer_text,
     get_screen_capture,
     get_selection_provider,
     get_text_injector,
 )
 from ordhjaelp.platform.base import HotkeyProvider
 from ordhjaelp.services.dictation import DictationService
+from ordhjaelp.services.pointer_read import UNITS, PointerReadService
 from ordhjaelp.services.read_aloud import ReadAloudService
 from ordhjaelp.services.screen_read import ScreenReadService
+from ordhjaelp.services.selection_read import SelectionAutoReader
 from ordhjaelp.services.word_prediction import WordPredictionService
 from ordhjaelp.tts.piper_engine import PiperEngine, ensure_voice
 
 log = logging.getLogger(__name__)
+
+# Kommandoer og genveje til læs under musen -> hvad der skal læses
+POINTER_COMMANDS = {f"laes_{unit}": unit for unit in UNITS}
 
 
 def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
@@ -47,14 +53,19 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
     model = ensure_voice(cfg.voice, voices_dir())
     log.info("Indlæser stemmen %s", cfg.voice)
     tts = PiperEngine(model, speed=cfg.speed)
+    selection = get_selection_provider()
     service = ReadAloudService(
         tts=tts,
         player=Player(),
-        selection=get_selection_provider(),
+        selection=selection,
         use_clipboard_fallback=cfg.use_clipboard_fallback,
     )
+    set_read_on_select = _make_read_on_select(selection, service)
+    if cfg.read_on_select:
+        set_read_on_select(True)
     dictation = _make_dictation(cfg, service) if cfg.dictation_enabled else None
     screen = _make_screen_reader(service)
+    pointer = _make_pointer_reader(service) if cfg.read_at_pointer else None
     prediction = WordPredictionService(lexicon_path(), learned_words_path())
     prediction.load_in_background()
     # Handlinger som kun brugerfladen kan udføre (fx vise markeringsoverlay)
@@ -76,6 +87,15 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
             return {"ok": True, "forslag": prediction.suggest(str(req.get("ord", "")))}
         if cmd == "skrevet":  # fra ordforslag: et ord og/eller en sætning er skrevet færdig
             return {"ok": True, "laeser": _read_while_typing(cfg, service, req)}
+        if cmd in POINTER_COMMANDS:
+            if pointer is None:
+                return {"ok": False, "fejl": "Læs under musen er slået fra i indstillingerne"}
+            # Egen tråd: genveje kommer fra portal-tråden, som ikke må vente på AT-SPI
+            threading.Thread(
+                target=pointer.read, args=(POINTER_COMMANDS[cmd],), daemon=True,
+                name="pointer-read",
+            ).start()  # fmt: skip
+            return {"ok": True}
         if cmd == "laer":
             prediction.learn(str(req.get("ord", "")))
             return {"ok": True}
@@ -96,7 +116,7 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
             return {"ok": True, "tilstand": dictation.toggle().value}
         if cmd == "afslut":
             # Samme vej som Ctrl+C, så både ikon- og baggrundstilstand lukker pænt
-            threading.Timer(0.1, os.kill, (os.getpid(), signal.SIGTERM)).start()
+            threading.Timer(0.1, _request_shutdown).start()
             return {"ok": True}
         return {"ok": False, "fejl": f"ukendt kommando: {cmd}"}
 
@@ -113,6 +133,9 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
                 bindings.pop("dikter", None)
             if screen is None:
                 bindings.pop("skaerm", None)
+            if pointer is None:
+                for name in POINTER_COMMANDS:
+                    bindings.pop(name, None)
             hk.start(bindings, lambda action: handle({"cmd": action}))
             hk_holder.append(hk)
             log.info("Globale genveje er aktive")
@@ -137,10 +160,10 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
 
     def restart() -> None:
         restart_requested.set()
-        os.kill(os.getpid(), signal.SIGTERM)  # luk pænt – derefter startes forfra
+        _request_shutdown()  # luk pænt – derefter startes forfra
 
     try:
-        hooks = _settings_hooks(cfg, tts, service, restart) if tray else None
+        hooks = _settings_hooks(cfg, tts, service, restart, set_read_on_select) if tray else None
         if not (tray and _run_tray(service, dictation, screen, ui_actions, hooks)):
             _wait_for_signal()
     finally:
@@ -159,7 +182,23 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
         os.execv(sys.executable, [sys.executable, "-m", "ordhjaelp", *sys.argv[1:]])
 
 
-def _settings_hooks(cfg: Config, tts: PiperEngine, service: ReadAloudService, restart):  # noqa: ANN001, ANN202
+def _make_read_on_select(selection, service: ReadAloudService) -> Callable[[bool], None]:  # noqa: ANN001
+    """Læs ved markering. Platformen begynder først at lytte, når det slås til."""
+    reader = SelectionAutoReader(service.read_new_selection)
+    listening = False
+
+    def set_enabled(enabled: bool) -> None:
+        nonlocal listening
+        if enabled and not listening:
+            listening = selection.on_change(reader.selection_changed)
+        reader.enabled = enabled and listening
+
+    return set_enabled
+
+
+def _settings_hooks(
+    cfg: Config, tts: PiperEngine, service: ReadAloudService, restart, set_read_on_select
+):  # noqa: ANN001, ANN202
     try:
         from ordhjaelp.models.store import ModelStore
         from ordhjaelp.ui.settings import SettingsHooks
@@ -185,6 +224,7 @@ def _settings_hooks(cfg: Config, tts: PiperEngine, service: ReadAloudService, re
         restart=restart,
         autostart=autostart,
         models=ModelStore(voices_dir(), whisper_dir()),
+        set_read_on_select=set_read_on_select,
     )
 
 
@@ -256,6 +296,16 @@ def _preload(engine) -> None:  # noqa: ANN001
         log.exception("Kunne ikke indlæse talegenkendelse")
 
 
+def _make_pointer_reader(service: ReadAloudService) -> PointerReadService | None:
+    try:
+        provider = get_pointer_text()
+    except PlatformNotSupported as exc:
+        log.warning("Læs under musen er ikke tilgængelig: %s", exc)
+        return None
+    threading.Thread(target=provider.prepare, daemon=True, name="pointer-prepare").start()
+    return PointerReadService(provider, say=service.say)
+
+
 def _make_screen_reader(service: ReadAloudService) -> ScreenReadService | None:
     from ordhjaelp.ocr.tesseract import TesseractOCR
 
@@ -292,9 +342,20 @@ def _run_tray(
     return True
 
 
+def _request_shutdown() -> None:
+    """Luk pænt via SIGTERM-håndteringen (samme vej som Ctrl+C)."""
+    if sys.platform == "win32":
+        # os.kill på Windows lukker processen brat uden oprydning. raise_signal kalder
+        # vores egen håndtering, ligesom SIGTERM gør på Linux.
+        signal.raise_signal(signal.SIGTERM)
+    else:
+        os.kill(os.getpid(), signal.SIGTERM)
+
+
 def _wait_for_signal() -> None:
     log.info("Ordhjælp kører uden ikon. Markér tekst og brug genvejen.")
     done = threading.Event()
     signal.signal(signal.SIGINT, lambda *_: done.set())
     signal.signal(signal.SIGTERM, lambda *_: done.set())
-    done.wait()
+    while not done.wait(0.5):  # med tidsgrænse: på Windows afbryder signaler ikke wait()
+        pass

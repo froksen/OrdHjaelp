@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import logging
+import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 
@@ -30,6 +31,8 @@ from ordhjaelp.platform.base import Autostart
 log = logging.getLogger(__name__)
 
 PREVIEW_TEXT = "Hej! Sådan lyder jeg, når jeg læser op for dig."
+KEYS_HELP_LINUX = "Tastaturgenveje ændres i Systemindstillinger → Tastaturgenveje → Ordhjælp."
+KEYS_HELP_WINDOWS = "Tastaturgenveje ændres under [genveje] i indstillingsfilen (config.toml)."
 
 
 @dataclass
@@ -44,14 +47,22 @@ class SettingsHooks:
     restart: Callable[[], None]
     autostart: Autostart | None = None
     models: ModelStore | None = None
+    set_read_on_select: Callable[[bool], None] | None = None
 
 
 def needs_restart(old: Config, new: Config) -> bool:
     """Ændringer, der kun kan træde i kraft ved en genstart."""
-    return (old.dictation_enabled, old.dictation_model, old.prediction_enabled) != (
+    # Læs under musen bruger genveje, som kun kan registreres ved start
+    return (
+        old.dictation_enabled,
+        old.dictation_model,
+        old.prediction_enabled,
+        old.read_at_pointer,
+    ) != (
         new.dictation_enabled,
         new.dictation_model,
         new.prediction_enabled,
+        new.read_at_pointer,
     )
 
 
@@ -90,6 +101,23 @@ class SettingsDialog(QDialog):
         self.clipboard = QCheckBox("Læs udklipsholderen (Ctrl+C), hvis intet er markeret")
         self.clipboard.setChecked(cfg.use_clipboard_fallback)
         form.addRow(self.clipboard)
+        self.read_on_select = QCheckBox("Læs op, så snart der markeres tekst med musen")
+        self.read_on_select.setChecked(cfg.read_on_select)
+        form.addRow(self.read_on_select)
+        note = QLabel("Dobbeltklik læser et ord. Trippelklik læser linjen eller afsnittet.")
+        note.setStyleSheet("color: gray")
+        note.setWordWrap(True)
+        form.addRow(note)
+        self.read_at_pointer = QCheckBox("Læs under musen med genveje")
+        self.read_at_pointer.setChecked(cfg.read_at_pointer)
+        form.addRow(self.read_at_pointer)
+        note = QLabel(
+            "Peg med musen og tryk Ctrl+Alt+1 (ordet), Ctrl+Alt+2 (sætningen) eller "
+            "Ctrl+Alt+3 (herfra og videre). Virker i fx Firefox og LibreOffice."
+        )
+        note.setStyleSheet("color: gray")
+        note.setWordWrap(True)
+        form.addRow(note)
         layout.addWidget(box)
 
         # -- Diktering --------------------------------------------------
@@ -150,7 +178,7 @@ class SettingsDialog(QDialog):
             self.autostart.setChecked(hooks.autostart.is_enabled())
         layout.addWidget(self.autostart)
 
-        keys = QLabel("Tastaturgenveje ændres i Systemindstillinger → Tastaturgenveje → Ordhjælp.")
+        keys = QLabel(KEYS_HELP_WINDOWS if sys.platform == "win32" else KEYS_HELP_LINUX)
         keys.setWordWrap(True)
         keys.setStyleSheet("color: gray")
         layout.addWidget(keys)
@@ -200,6 +228,8 @@ class SettingsDialog(QDialog):
         cfg = copy.deepcopy(self._original)
         cfg.speed = self.speed.value() / 100
         cfg.use_clipboard_fallback = self.clipboard.isChecked()
+        cfg.read_on_select = self.read_on_select.isChecked()
+        cfg.read_at_pointer = self.read_at_pointer.isChecked()
         cfg.dictation_enabled = self.dictation.isChecked()
         cfg.dictation_model = str(self.model.currentData() or cfg.dictation_model)
         if not self.model.currentData():  # ingen talemodel hentet
@@ -216,6 +246,8 @@ class SettingsDialog(QDialog):
         hooks = self._hooks
         save_config(new)
         hooks.set_clipboard_fallback(new.use_clipboard_fallback)
+        if hooks.set_read_on_select is not None:
+            hooks.set_read_on_select(new.read_on_select)
         for name in ("dikter", "skaerm"):
             hooks.set_icon_visible(name, new.show_icons[name])
         if hooks.autostart is not None and self.autostart.isEnabled():

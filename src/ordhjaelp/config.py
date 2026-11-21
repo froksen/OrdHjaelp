@@ -47,6 +47,8 @@ class Config:
     use_clipboard_fallback: bool = False
     read_word_on_space: bool = False
     read_sentence_on_period: bool = False
+    read_on_select: bool = False
+    read_at_pointer: bool = False
     dictation_enabled: bool = True
     dictation_model: str = "dansk-hurtig"
     prediction_enabled: bool = True
@@ -56,6 +58,9 @@ class Config:
             "stop": "CTRL+ALT+S",
             "dikter": "CTRL+ALT+D",
             "skaerm": "CTRL+ALT+B",
+            "laes_ord": "CTRL+ALT+1",
+            "laes_saetning": "CTRL+ALT+2",
+            "laes_herfra": "CTRL+ALT+3",
         }
     )
     # Hvilke ikoner der vises ved uret (læs op-ikonet vises altid – det har menuen)
@@ -75,6 +80,8 @@ class Config:
         )
         cfg.read_word_on_space = bool(reading.get("laes_ord_ved_mellemrum", False))
         cfg.read_sentence_on_period = bool(reading.get("laes_saetning_ved_punktum", False))
+        cfg.read_on_select = bool(reading.get("laes_ved_markering", False))
+        cfg.read_at_pointer = bool(reading.get("laes_under_musen", False))
         dictation = raw.get("diktering", {})
         cfg.dictation_enabled = bool(dictation.get("aktiv", cfg.dictation_enabled))
         cfg.dictation_model = str(dictation.get("model", cfg.dictation_model))
@@ -110,6 +117,12 @@ brug_udklipsholder = {b(self.use_clipboard_fallback)}
 # Læs mens du skriver (kræver ordforslag/IBus):
 laes_ord_ved_mellemrum = {b(self.read_word_on_space)}
 laes_saetning_ved_punktum = {b(self.read_sentence_on_period)}
+# Læs ved markering: læs op, så snart der markeres tekst med musen
+# (dobbeltklik = et ord, trippelklik = en linje eller et afsnit).
+laes_ved_markering = {b(self.read_on_select)}
+# Læs under musen med genveje: ordet, sætningen eller herfra og videre
+# (se [genveje]). Virker i programmer med tilgængelighed, fx Firefox og LibreOffice.
+laes_under_musen = {b(self.read_at_pointer)}
 
 [diktering]
 aktiv = {b(self.dictation_enabled)}

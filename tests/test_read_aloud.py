@@ -123,3 +123,24 @@ def test_listener_errors_do_not_break_reading() -> None:
     assert svc.read_selection()
     svc.wait(2)
     assert tts.texts == ["tekst"]
+
+
+def test_read_new_selection_reads_without_hint_or_clipboard() -> None:
+    svc, tts, _ = make(None, "fra udklipsholder", fallback=True, hint="Markér noget")
+    assert not svc.read_new_selection()
+    svc.wait(2)
+    assert tts.texts == []  # hverken udklipsholder eller talt hjælpebesked
+
+
+def test_read_new_selection_reads_selected_word() -> None:
+    svc, tts, _ = make("skole")
+    assert svc.read_new_selection()
+    svc.wait(2)
+    assert tts.texts == ["skole"]
+
+
+def test_read_new_selection_skips_very_long_text() -> None:
+    svc, tts, _ = make("ord " * 2000)  # fx Ctrl+A i et langt dokument
+    assert not svc.read_new_selection(max_chars=3000)
+    svc.wait(2)
+    assert tts.texts == []

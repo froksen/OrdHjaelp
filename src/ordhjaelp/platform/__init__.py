@@ -9,6 +9,7 @@ from ordhjaelp.platform.base import (
     HotkeyProvider,
     InputMethod,
     PlatformNotSupported,
+    PointerText,
     ScreenCapture,
     SelectionProvider,
     TextInjector,
@@ -20,6 +21,10 @@ def get_selection_provider() -> SelectionProvider:
         from ordhjaelp.platform.linux.selection import LinuxSelection
 
         return LinuxSelection()
+    if sys.platform == "win32":
+        from ordhjaelp.platform.windows.selection import WindowsSelection
+
+        return WindowsSelection()
     raise PlatformNotSupported(f"Markeret tekst understøttes endnu ikke på {sys.platform}")
 
 
@@ -28,6 +33,10 @@ def get_hotkey_provider() -> HotkeyProvider:
         from ordhjaelp.platform.linux.hotkeys import PortalHotkeys
 
         return PortalHotkeys()
+    if sys.platform == "win32":
+        from ordhjaelp.platform.windows.hotkeys import WindowsHotkeys
+
+        return WindowsHotkeys()
     raise PlatformNotSupported(f"Globale genveje understøttes endnu ikke på {sys.platform}")
 
 
@@ -36,6 +45,10 @@ def get_text_injector() -> TextInjector:
         from ordhjaelp.platform.linux.inject import PortalKeyboard
 
         return PortalKeyboard()
+    if sys.platform == "win32":
+        from ordhjaelp.platform.windows.inject import WindowsKeyboard
+
+        return WindowsKeyboard()
     raise PlatformNotSupported(f"Indsættelse af tekst understøttes endnu ikke på {sys.platform}")
 
 
@@ -44,7 +57,19 @@ def get_screen_capture() -> ScreenCapture:
         from ordhjaelp.platform.linux.screenshot import PortalScreenshot
 
         return PortalScreenshot()
+    if sys.platform == "win32":
+        from ordhjaelp.platform.windows.screenshot import WindowsScreenshot
+
+        return WindowsScreenshot()
     raise PlatformNotSupported(f"Skærmbilleder understøttes endnu ikke på {sys.platform}")
+
+
+def get_pointer_text() -> PointerText:
+    if sys.platform.startswith("linux"):
+        from ordhjaelp.platform.linux.pointer import LinuxPointerText
+
+        return LinuxPointerText()
+    raise PlatformNotSupported(f"Læs under musen understøttes endnu ikke på {sys.platform}")
 
 
 def get_autostart() -> Autostart:
@@ -52,6 +77,10 @@ def get_autostart() -> Autostart:
         from ordhjaelp.platform.linux.install import LinuxAutostart
 
         return LinuxAutostart()
+    if sys.platform == "win32":
+        from ordhjaelp.platform.windows.install import WindowsAutostart
+
+        return WindowsAutostart()
     raise PlatformNotSupported(f"Autostart understøttes endnu ikke på {sys.platform}")
 
 
@@ -67,6 +96,7 @@ __all__ = [
     "get_input_method",
     "get_autostart",
     "get_hotkey_provider",
+    "get_pointer_text",
     "get_screen_capture",
     "get_selection_provider",
     "get_text_injector",

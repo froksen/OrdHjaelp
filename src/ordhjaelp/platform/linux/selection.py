@@ -19,10 +19,18 @@ import shutil
 import signal
 import subprocess
 import threading
+import time
+from collections.abc import Callable
+
+from ordhjaelp.platform.freshness import FreshnessTracker
 
 log = logging.getLogger(__name__)
 
+__all__ = ["FreshnessTracker", "LinuxSelection"]
+
 _TIMEOUT = 2.0
+_STARTUP_GRACE = 1.0  # sekunder efter start, hvor meldinger om markeringen ignoreres
+_X11_POLL_INTERVAL = 0.5  # X11 kan ikke melde ændringer, så vi kigger efter to gange i sekundet
 
 
 def _session_type() -> str:
@@ -57,27 +65,6 @@ def _run(cmds: list[list[str]]) -> str | None:
     return None
 
 
-class FreshnessTracker:
-    """Afgør om en markering er ny eller allerede læst op.
-
-    serial er et tal, der stiger hver gang markeringen ændrer sig (eller None,
-    hvis vi ikke kan overvåge ændringer – så sammenlignes kun teksten).
-    """
-
-    def __init__(self) -> None:
-        self._last: tuple[str, int | None] | None = None
-
-    def fresh(self, text: str | None, serial: int | None) -> str | None:
-        if not text:
-            return None
-        if self._last is not None:
-            last_text, last_serial = self._last
-            if text == last_text and serial == last_serial:
-                return None  # samme markering som sidst – allerede læst op
-        self._last = (text, serial)
-        return text
-
-
 def _die_with_parent() -> None:
     """Sørg for at overvågningsprocessen lukker, når Ordhjælp lukker (Linux)."""
     with contextlib.suppress(OSError):
@@ -89,6 +76,8 @@ class _SelectionWatcher:
 
     def __init__(self) -> None:
         self.serial = 0
+        self._callbacks: list[Callable[[], None]] = []
+        self._started = time.monotonic()
         self._proc = subprocess.Popen(
             ["wl-paste", "--primary", "--watch", "echo"],
             stdout=subprocess.PIPE,
@@ -102,10 +91,44 @@ class _SelectionWatcher:
         assert self._proc.stdout is not None
         for _ in self._proc.stdout:
             self.serial += 1
+            # wl-paste melder måske også den markering, der fandtes ved start. Den er ikke ny.
+            if time.monotonic() - self._started > _STARTUP_GRACE:
+                _notify(self._callbacks)
+
+    def add_callback(self, callback: Callable[[], None]) -> None:
+        self._callbacks.append(callback)
 
     @property
     def alive(self) -> bool:
         return self._proc.poll() is None
+
+
+def _notify(callbacks: list[Callable[[], None]]) -> None:
+    for callback in list(callbacks):
+        try:
+            callback()
+        except Exception:
+            log.exception("Fejl i lytter på markeringen")
+
+
+class _X11SelectionPoller:
+    """Kigger efter ændringer af primary selection på X11, hvor intet melder dem."""
+
+    def __init__(self) -> None:
+        self._callbacks: list[Callable[[], None]] = []
+        threading.Thread(target=self._poll, daemon=True, name="selection-poll").start()
+
+    def add_callback(self, callback: Callable[[], None]) -> None:
+        self._callbacks.append(callback)
+
+    def _poll(self) -> None:
+        last = _run(_commands(primary=True))  # det, der er markeret nu, er ikke nyt
+        while True:
+            time.sleep(_X11_POLL_INTERVAL)
+            text = _run(_commands(primary=True))
+            if text and text != last:
+                _notify(self._callbacks)
+            last = text
 
 
 class LinuxSelection:
@@ -113,6 +136,7 @@ class LinuxSelection:
         self._primary = FreshnessTracker()
         self._clipboard = FreshnessTracker()
         self._watcher: _SelectionWatcher | None = None
+        self._poller: _X11SelectionPoller | None = None
         if _session_type() == "wayland" and shutil.which("wl-paste"):
             try:
                 self._watcher = _SelectionWatcher()
@@ -126,6 +150,18 @@ class LinuxSelection:
 
     def selected_text(self) -> str | None:
         return self._primary.fresh(_run(_commands(primary=True)), self._serial())
+
+    def on_change(self, callback: Callable[[], None]) -> bool:
+        if self._watcher and self._watcher.alive:
+            self._watcher.add_callback(callback)
+            return True
+        if _session_type() == "x11" and any(shutil.which(c[0]) for c in _commands(True)):
+            if self._poller is None:
+                self._poller = _X11SelectionPoller()
+            self._poller.add_callback(callback)
+            return True
+        log.warning("Kan ikke se, når markeringen ændrer sig (mangler wl-clipboard/xclip)")
+        return False
 
     def clipboard_text(self) -> str | None:
         # Udklipsholderen overvåges ikke – samme tekst to gange regnes for gammel.

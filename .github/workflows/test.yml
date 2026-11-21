@@ -1,0 +1,58 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# En ny push stopper den gamle kørsel, så en fejl, der allerede er rettet,
+# ikke bliver meldt igen fra en forældet commit.
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Systempakker
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q libegl1 libgl1 libxkbcommon0 libfontconfig1 libdbus-1-3 \
+            libportaudio2 hunspell hunspell-da at-spi2-core xvfb xdotool dbus-x11 \
+            python3-gi gir1.2-gtk-3.0
+      - run: uv sync
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run pytest -q
+        env:
+          QT_QPA_PLATFORM: offscreen
+      - name: Læs under musen mod rigtig AT-SPI
+        run: uv run pytest -q tests/integration/test_atspi.py
+        env:
+          ORDHJAELP_ATSPI_TEST: "1"
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Hunspell med dansk ordbog (ordforslag bruger den til navne som København)
+        shell: pwsh
+        run: |
+          C:\msys64\usr\bin\pacman.exe -Sy --noconfirm --needed mingw-w64-x86_64-hunspell
+          $dict = Join-Path $env:RUNNER_TEMP "hunspell"
+          New-Item -ItemType Directory -Force -Path $dict | Out-Null
+          foreach ($ext in "aff", "dic") {
+            Invoke-WebRequest -OutFile (Join-Path $dict "da_DK.$ext") `
+              -Uri "https://raw.githubusercontent.com/LibreOffice/dictionaries/master/da_DK/da_DK.$ext"
+          }
+          "C:\msys64\mingw64\bin" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
+          "DICPATH=$dict" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+      - run: uv sync
+      - run: uv run pytest -q
+        env:
+          QT_QPA_PLATFORM: offscreen
+          PYTHONUTF8: "1"

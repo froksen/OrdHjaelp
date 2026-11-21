@@ -14,6 +14,8 @@ from ordhjaelp.tts.piper_engine import SpeechChunk
 log = logging.getLogger(__name__)
 
 NOTHING_SELECTED_HINT = "Markér noget tekst først."
+# Læs ved markering springer meget lange markeringer over (fx Ctrl+A i et dokument)
+AUTO_READ_MAX_CHARS = 3000
 
 
 class Synthesizer(Protocol):
@@ -85,6 +87,19 @@ class ReadAloudService:
             log.info("Ingen markeret tekst")
             if self._hint:
                 self.say(self._hint)
+            return False
+        return self.say(text)
+
+    def read_new_selection(self, max_chars: int = AUTO_READ_MAX_CHARS) -> bool:
+        """Læs en ny markering op uden hjælpebesked og uden udklipsholderen.
+
+        Bruges af læs ved markering, hvor oplæsningen sker af sig selv.
+        """
+        text = self._selection.selected_text()
+        if not text:
+            return False
+        if len(text) > max_chars:
+            log.info("Markeringen er for lang til at blive læst automatisk (%d tegn)", len(text))
             return False
         return self.say(text)
 

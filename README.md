@@ -28,7 +28,9 @@ til Windows og macOS.
 | 🎤 | **Diktering** | Klik i et dokument, klik på det **grønne ikon** (eller **Ctrl+Alt+D**), og tal. Klik igen – teksten skrives ind, hvor markøren står |
 | ⬚ | **Læs fra skærmen** | Klik på det **lilla ikon** (eller **Ctrl+Alt+B**), og træk en firkant om tekst i et billede, en PDF eller et spil |
 | ✍️ | **Ordforslag** | Forslag ved markøren, mens der skrives – også ved lydret stavning |
+| 🖱️ | **Læs under musen** | Peg med musen og tryk **Ctrl+Alt+1** (ordet), **Ctrl+Alt+2** (sætningen) eller **Ctrl+Alt+3** (herfra og videre). Slås til i indstillingerne |
 | 🗣️ | **Læs mens du skriver** | Ordet læses op ved mellemrum og/eller sætningen ved punktum (slås til i indstillingerne) |
+| 🖱️ | **Læs ved markering** | Dobbeltklik på et ord, og det læses op. Trippelklik læser linjen eller afsnittet (slås til i indstillingerne) |
 
 ### Ordforslag
 
@@ -54,10 +56,21 @@ bogstaver som i *hvad/hjem/mand/dejlig*, *sg/sk*, *æ/e*, endelser m.m.) og stav
 Den testes mod en samling typiske stavefejl
 ([`tests/ordmotor/fejlkorpus.tsv`](tests/ordmotor/fejlkorpus.tsv)).
 
+### Læs under musen
+
+Ordhjælp spørger programmet, hvilken tekst der står under musen. Det bruger
+tilgængeligheds-API'en **AT-SPI**, den samme som skærmlæseren Orca.
+
+- Virker i programmer med god tilgængelighed: Firefox, LibreOffice, Kate, KDE- og GTK-programmer
+- Chrome og Electron-programmer skal måske startes med `--force-renderer-accessibility`
+- Virker ikke i billeder, scannede PDF'er og spil. Brug **Læs fra skærmen** dér
+- På Wayland kræver det **KDE Plasma**: KWin fortæller, hvor musen er. På X11 bruges `xdotool`
+- Genvejene registreres ved start, så Ordhjælp genstarter, når funktionen slås til eller fra
+
 ### Indstillinger
 
 Højreklik på det blå ikon → **Indstillinger**: taletempo (med "Prøv stemmen"),
-diktering og talemodel, ordforslag, læs mens du skriver, hvilke ikoner der vises, og
+læs ved markering, diktering og talemodel, ordforslag, læs mens du skriver, hvilke ikoner der vises, og
 autostart ved login. Indstillingerne gemmes i `~/.config/ordhjaelp/config.toml`.
 
 ## Installation (Fedora KDE)
@@ -84,7 +97,7 @@ Start **Ordhjælp** fra programmenuen.
 ### Fra kildekoden
 
 ```bash
-sudo dnf install wl-clipboard portaudio tesseract tesseract-langpack-dan hunspell-da ibus
+sudo dnf install wl-clipboard portaudio tesseract tesseract-langpack-dan hunspell-da ibus at-spi2-core xdotool
 pip install --user uv
 git clone https://github.com/froksen/OrdHj-lp.git ordhjaelp && cd ordhjaelp
 uv sync
@@ -108,6 +121,29 @@ Derefter:
   *Systemindstillinger → Tastatur → Virtuelt tastatur → **IBus Wayland***.
   Ordhjælp opdager det af sig selv.
 
+## Installation (Windows, prøveudgave)
+
+Windows-udgaven er ny og endnu ikke afprøvet bredt. Der er ingen installer endnu.
+
+```powershell
+winget install astral-sh.uv
+winget install UB-Mannheim.TesseractOCR   # til "læs fra skærmen" (vælg den danske sprogpakke)
+git clone https://github.com/froksen/OrdHj-lp.git ordhjaelp; cd ordhjaelp
+uv sync
+uv run ordhjaelp installer --autostart    # start ved login
+uv run ordhjaelp start
+```
+
+| Virker på Windows | Sådan |
+|---|---|
+| Læs op | Markeret tekst kopieres med Ctrl+C, og det, der lå i udklipsholderen, lægges tilbage bagefter |
+| Diktering | Teksten skrives ind tegn for tegn, så æ, ø og å virker på alle tastaturer |
+| Læs fra skærmen | Tesseract findes også, når det ikke ligger i PATH |
+| Genveje og autostart | Genvejene ændres under `[genveje]` i `%LOCALAPPDATA%\ordhjaelp\ordhjaelp\config.toml` |
+
+Kommer senere på Windows: ordforslag, læs ved markering og læs under musen.
+Bemærk: udklipsholderens historik (Win+V) kan vise den tekst, der er læst op.
+
 ## Kommandoer
 
 | Kommando | Hvad den gør |
@@ -118,6 +154,7 @@ Derefter:
 | `ordhjaelp sig "tekst"` | Læser en tekst op |
 | `ordhjaelp dikter` | Starter/stopper diktering |
 | `ordhjaelp skaerm` | Læs tekst fra et udsnit af skærmen |
+| `ordhjaelp laes-ord` / `laes-saetning` / `laes-herfra` | Læs ordet, sætningen eller herfra under musen |
 | `ordhjaelp sammenlign-modeller` | Optag en sætning og se, hvad hver talemodel hører – godt til at vælge model ud fra elevens egen stemme |
 | `ordhjaelp status` | Viser om Ordhjælp kører |
 | `ordhjaelp installer [--autostart]` / `afinstaller` | Menupunkt og autostart for brugeren |
@@ -178,6 +215,7 @@ forslagene fra Ordhjælp-tjenesten.
 uv run pytest                     # tests
 uv run ruff check . && uv run ruff format .
 ORDHJAELP_IBUS_TEST=1 uv run pytest tests/integration   # IBus-test med privat ibus-daemon
+ORDHJAELP_ATSPI_TEST=1 uv run pytest tests/integration/test_atspi.py   # læs under musen (Xvfb + AT-SPI)
 ```
 
 **Hjælp med ordforslag:** Den bedste måde at gøre ordforslagene bedre på er rigtige
@@ -192,7 +230,9 @@ Ordhjælp er under udvikling og afprøves på Fedora KDE Plasma (Wayland).
 - [x] Ordforslag med fonetisk matching, læs mens du skriver
 - [x] Indstillinger, autostart, RPM
 - [x] Velkomstvindue: vælg og hent sprogmodeller; administrér dem i indstillingerne
-- [ ] Windows og macOS
+- [x] Windows: læs op, diktering, læs fra skærmen, genveje, autostart (prøveudgave)
+- [ ] Windows: ordforslag, læs ved markering, læs under musen, installer
+- [ ] macOS
 
 ## Licens
 
