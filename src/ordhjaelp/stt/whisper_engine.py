@@ -10,31 +10,16 @@ import numpy as np
 
 log = logging.getLogger(__name__)
 
-# Kaldenavne til indstillingsfilen. Værdien er et faster-whisper-navn eller et
-# Hugging Face-repo i CTranslate2-format. Vi bruger kun færdige modeller, som andre
-# vedligeholder – Ordhjælp konverterer eller træner ikke selv modeller.
-MODEL_ALIASES: dict[str, str] = {
-    "hurtig": "small",
-    "turbo": "large-v3-turbo",
-    # Danske udgaver – færdigkonverterede af andre, hentes direkte fra Hugging Face
-    "dansk-hurtig": "lucasw89/whisper-small-danish-ct2-int8",
-    "dansk-turbo": "q-henric/whisper-large-v3-turbo-danish-ct2",
-    "dansk-stor": "pluttodk/roest-v3-whisper-1.5b-ct2",  # CoRal røst-v3
-}
-
-
-# Valgmuligheder i indstillingsvinduet: (kaldenavn, beskrivelse)
-MODEL_CHOICES: list[tuple[str, str]] = [
-    ("dansk-hurtig", "Dansk – hurtig (anbefalet, ca. 250 MB)"),
-    ("dansk-turbo", "Dansk – mere præcis, men langsommere (ca. 1,6 GB)"),
-    ("dansk-stor", "Dansk – CoRal røst, langsom og uden tegnsætning (ca. 3 GB)"),
-    ("hurtig", "Generel – hurtig, men svagere på dansk (ca. 500 MB)"),
-    ("turbo", "Generel – præcis (ca. 1,6 GB)"),
-]
-
 
 def resolve_model(name: str) -> str:
-    return MODEL_ALIASES.get(name, name)
+    """Kaldenavn fra indstillingerne (fx "dansk-hurtig") → det, faster-whisper skal hente.
+
+    Ukendte navne bruges som de er (faster-whisper-navn eller Hugging Face-repo).
+    """
+    from ordhjaelp.models.catalog import Kind, get
+
+    model = get(name)
+    return model.source if model is not None and model.kind is Kind.SPEECH else name
 
 
 class WhisperEngine:

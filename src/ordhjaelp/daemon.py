@@ -32,6 +32,18 @@ log = logging.getLogger(__name__)
 
 
 def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
+    # Start IPC med det samme, så en ekstra start (fx dobbeltklik i menuen) under
+    # første opsætning ser, at Ordhjælp allerede kører.
+    handler: dict[str, Callable[[ipc.Request], ipc.Response]] = {"fn": _handle_while_starting}
+    server = ipc.Server(lambda req: handler["fn"](req))
+    server.start()
+    try:
+        if not _ensure_models(cfg, ui=tray):
+            log.info("Opsætningen blev afbrudt")
+            return
+    except BaseException:
+        server.close()
+        raise
     model = ensure_voice(cfg.voice, voices_dir())
     log.info("Indlæser stemmen %s", cfg.voice)
     tts = PiperEngine(model, speed=cfg.speed)
@@ -88,8 +100,7 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
             return {"ok": True}
         return {"ok": False, "fejl": f"ukendt kommando: {cmd}"}
 
-    server = ipc.Server(handle)
-    server.start()
+    handler["fn"] = handle
 
     hk_holder: list[HotkeyProvider] = []
 
@@ -150,6 +161,7 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
 
 def _settings_hooks(cfg: Config, tts: PiperEngine, service: ReadAloudService, restart):  # noqa: ANN001, ANN202
     try:
+        from ordhjaelp.models.store import ModelStore
         from ordhjaelp.ui.settings import SettingsHooks
     except ImportError:
         return None
@@ -172,7 +184,35 @@ def _settings_hooks(cfg: Config, tts: PiperEngine, service: ReadAloudService, re
         set_icon_visible=lambda name, visible: None,  # sættes af brugerfladen
         restart=restart,
         autostart=autostart,
+        models=ModelStore(voices_dir(), whisper_dir()),
     )
+
+
+def _handle_while_starting(req: ipc.Request) -> ipc.Response:
+    if req.get("cmd") == "ping":
+        return {"ok": True}
+    return {"ok": False, "fejl": "Ordhjælp gør sig klar – prøv igen om lidt"}
+
+
+def _ensure_models(cfg: Config, ui: bool) -> bool:
+    """Sørg for at de valgte sprogmodeller er hentet. False = brugeren afbrød."""
+    from ordhjaelp.models.store import ModelStore
+
+    store = ModelStore(voices_dir(), whisper_dir())
+    if ui:
+        try:
+            from PySide6.QtWidgets import QApplication, QDialog
+
+            from ordhjaelp.ui.model_manager import FirstRunDialog, needs_first_run
+        except ImportError:
+            ui = False
+    if not ui:
+        return True  # uden brugerflade hentes modellerne automatisk, når de bruges
+    if not needs_first_run(store, cfg):
+        return True
+    QApplication.instance() or QApplication([])
+    dialog = FirstRunDialog(store, cfg)
+    return dialog.exec() == QDialog.DialogCode.Accepted
 
 
 def _read_while_typing(cfg: Config, service: ReadAloudService, req: ipc.Request) -> bool:

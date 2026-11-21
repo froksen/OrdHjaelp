@@ -94,8 +94,14 @@ uv run ordhjaelp start
 
 ### Første start
 
-- **Kræver internet:** den danske stemme (ca. 60 MB) og talegenkendelsen (ca. 250 MB)
-  hentes første gang, og ordlisten bygges. Derefter kører alt offline.
+Ved første start åbner et **velkomstvindue**, hvor man vælger, hvilke sprogmodeller der
+skal hentes – den danske stemme og den hurtige danske talegenkendelse er valgt på
+forhånd (i alt ca. 310 MB). Modellerne hentes **én gang** med statuslinje og virker
+derefter uden internet. Flere kan hentes – og ubrugte slettes – under
+*Indstillinger → Sprogmodeller …*.
+
+Derefter:
+
 - KDE spørger om lov til **tastaturgenveje**, **tastaturadgang** (til diktering) og
   **skærmbilleder** (til læs fra skærmen) – godkend dem én gang.
 - **Ordforslag** kræver, at IBus er valgt som indtastningsmetode:
@@ -130,6 +136,8 @@ trænes eller konverteres ikke egne modeller. Vedligeholdet ligger på selve pro
 | Ordforslag – hyppighed | [wordfreq](https://github.com/rspeer/wordfreq) (dansk) | Apache-2.0 (kode) / CC-BY-SA-4.0 (data) |
 | Ordforslag – ordbog | Den danske Hunspell-ordbog fra [Stavekontrolden.dk](https://stavekontrolden.dk) | GPL-2.0+ / LGPL-2.1+ / MPL-1.1 |
 
+Modellerne er samlet i et katalog ([`models/catalog.py`](src/ordhjaelp/models/catalog.py))
+og hentes af programmet selv – intet er pakket med i repoet eller RPM'en.
 Talemodellen kan skiftes i indstillingerne. `ordhjaelp sammenlign-modeller` viser, hvordan
 modellerne klarer sig med en rigtig optagelse.
 
@@ -142,6 +150,7 @@ Windows og macOS.
 ```
 src/ordhjaelp/
 ├── services/       funktionerne: læs op, diktering, læs fra skærmen, ordforslag
+├── models/       katalog over sprogmodeller + hent/slet
 ├── ordmotor/       ordforslag: ordliste, danske lydregler, rangering
 ├── tts/            oplæsning (Piper)
 ├── stt/            talegenkendelse (faster-whisper)
@@ -182,7 +191,7 @@ Ordhjælp er under udvikling og afprøves på Fedora KDE Plasma (Wayland).
 - [x] Læs op, diktering, læs fra skærmen
 - [x] Ordforslag med fonetisk matching, læs mens du skriver
 - [x] Indstillinger, autostart, RPM
-- [ ] Synlig besked ved første start, mens modellerne hentes
+- [x] Velkomstvindue: vælg og hent sprogmodeller; administrér dem i indstillingerne
 - [ ] Windows og macOS
 
 ## Licens

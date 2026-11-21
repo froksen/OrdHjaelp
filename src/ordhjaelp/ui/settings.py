@@ -23,8 +23,9 @@ from PySide6.QtWidgets import (
 )
 
 from ordhjaelp.config import Config, save_config
+from ordhjaelp.models.catalog import Kind, of_kind, size_text
+from ordhjaelp.models.store import ModelStore
 from ordhjaelp.platform.base import Autostart
-from ordhjaelp.stt.whisper_engine import MODEL_CHOICES
 
 log = logging.getLogger(__name__)
 
@@ -42,6 +43,7 @@ class SettingsHooks:
     set_icon_visible: Callable[[str, bool], None]
     restart: Callable[[], None]
     autostart: Autostart | None = None
+    models: ModelStore | None = None
 
 
 def needs_restart(old: Config, new: Config) -> bool:
@@ -97,18 +99,17 @@ class SettingsDialog(QDialog):
         self.dictation.setChecked(cfg.dictation_enabled)
         form.addRow(self.dictation)
         self.model = QComboBox()
-        for alias, text in MODEL_CHOICES:
-            self.model.addItem(text, alias)
-        known = [alias for alias, _ in MODEL_CHOICES]
-        if cfg.dictation_model not in known:  # selvvalgt model fra filen
-            self.model.addItem(cfg.dictation_model, cfg.dictation_model)
-        self.model.setCurrentIndex(max(0, self.model.findData(cfg.dictation_model)))
-        self.dictation.toggled.connect(self.model.setEnabled)
-        self.model.setEnabled(cfg.dictation_enabled)
-        form.addRow("Talegenkendelse:", self.model)
-        note = QLabel("En ny model hentes automatisk første gang.")
-        note.setStyleSheet("color: gray")
-        form.addRow("", note)
+        self._fill_models(cfg.dictation_model)
+        self.dictation.toggled.connect(self._update_model_enabled)
+        manage = QPushButton("Sprogmodeller …")
+        manage.setToolTip("Hent flere stemmer og talemodeller, eller slet dem")
+        manage.clicked.connect(self._open_model_manager)
+        manage.setEnabled(hooks.models is not None)
+        mrow = QHBoxLayout()
+        mrow.addWidget(self.model, 1)
+        mrow.addWidget(manage)
+        form.addRow("Talegenkendelse:", mrow)
+        self._update_model_enabled()
         layout.addWidget(box)
 
         # -- Ordforslag ---------------------------------------------------
@@ -164,6 +165,32 @@ class SettingsDialog(QDialog):
         layout.addWidget(buttons)
         self._speed_changed(self.speed.value())
 
+    def _fill_models(self, selected: str) -> None:
+        """Kun hentede talemodeller kan vælges."""
+        store = self._hooks.models
+        self.model.clear()
+        for model in of_kind(Kind.SPEECH):
+            if store is None or store.is_installed(model):
+                self.model.addItem(f"{model.title} ({size_text(model.size_mb)})", model.id)
+        if selected and self.model.findData(selected) < 0 and store is None:
+            self.model.addItem(selected, selected)  # selvvalgt model fra filen
+        if self.model.count() == 0:
+            self.model.addItem("Ingen hentet – klik på Sprogmodeller …", "")
+        self.model.setCurrentIndex(max(0, self.model.findData(selected)))
+
+    def _update_model_enabled(self) -> None:
+        self.model.setEnabled(self.dictation.isChecked() and bool(self.model.currentData()))
+
+    def _open_model_manager(self) -> None:
+        from ordhjaelp.ui.model_manager import ModelManagerDialog
+
+        assert self._hooks.models is not None
+        current = str(self.model.currentData() or "")
+        dialog = ModelManagerDialog(self._hooks.models, self._hooks.config)
+        dialog.exec()
+        self._fill_models(current)
+        self._update_model_enabled()
+
     def _speed_changed(self, value: int) -> None:
         speed = value / 100
         self.speed_label.setText(f"{speed:.2f}".replace(".", ",") + " × normal")
@@ -174,7 +201,9 @@ class SettingsDialog(QDialog):
         cfg.speed = self.speed.value() / 100
         cfg.use_clipboard_fallback = self.clipboard.isChecked()
         cfg.dictation_enabled = self.dictation.isChecked()
-        cfg.dictation_model = str(self.model.currentData())
+        cfg.dictation_model = str(self.model.currentData() or cfg.dictation_model)
+        if not self.model.currentData():  # ingen talemodel hentet
+            cfg.dictation_enabled = False
         cfg.prediction_enabled = self.prediction.isChecked()
         cfg.read_word_on_space = self.read_word.isChecked()
         cfg.read_sentence_on_period = self.read_sentence.isChecked()

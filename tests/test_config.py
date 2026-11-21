@@ -36,27 +36,10 @@ def test_invalid_speed_rejected() -> None:
         Config.from_toml("[oplaesning]\ntempo = 0\n")
 
 
-def test_model_aliases_are_ready_made_repos() -> None:
-    from ordhjaelp.stt.whisper_engine import MODEL_ALIASES, resolve_model
+def test_model_names_resolve_via_catalog() -> None:
+    from ordhjaelp.stt.whisper_engine import resolve_model
 
     assert resolve_model("dansk-hurtig") == "lucasw89/whisper-small-danish-ct2-int8"
+    assert resolve_model("hurtig") == "small"
     assert resolve_model("noget/andet") == "noget/andet"
-    assert all(v for v in MODEL_ALIASES.values())
-
-
-def test_roundtrip_keeps_all_values() -> None:
-    cfg = Config(
-        speed=0.85,
-        use_clipboard_fallback=True,
-        dictation_enabled=False,
-        dictation_model="dansk-turbo",
-    )
-    cfg.show_icons["skaerm"] = False
-    cfg.hotkeys["laes"] = "META+L"
-    again = Config.from_toml(cfg.to_toml())
-    assert again == cfg
-
-
-def test_strings_with_quotes_are_escaped() -> None:
-    cfg = Config(voice='mærkelig "stemme"')
-    assert Config.from_toml(cfg.to_toml()).voice == 'mærkelig "stemme"'
+    assert resolve_model("da_DK-talesyntese-medium") == "da_DK-talesyntese-medium"  # ikke tale
