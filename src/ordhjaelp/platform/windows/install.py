@@ -11,8 +11,14 @@ RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
 VALUE_NAME = "Ordhjaelp"
 
 
-def start_command(executable: str = sys.executable, entry_point: str | None = None) -> str:
+def start_command(
+    executable: str = sys.executable,
+    entry_point: str | None = None,
+    frozen: bool = bool(getattr(sys, "frozen", False)),
+) -> str:
     """Kommandoen der starter Ordhjælp ved login, uden et sort konsolvindue."""
+    if frozen:  # installeret med installeren: Ordhjaelp.exe er selve programmet
+        return f'"{executable}" start'
     if entry_point:
         return f'"{entry_point}" start'
     exe = Path(executable)
