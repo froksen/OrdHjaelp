@@ -1,10 +1,12 @@
+import ctypes
 import os
 
 import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 import pypdfium2 as pdfium  # noqa: E402
-from PySide6.QtGui import QColor, QFont, QImage, QPageSize, QPainter, QPdfWriter  # noqa: E402
+import pypdfium2.raw as pdfium_c  # noqa: E402
+from PySide6.QtGui import QImage  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 from ordhjaelp.ocr.pdf import (  # noqa: E402
@@ -24,37 +26,66 @@ def app():
     return QApplication.instance() or QApplication([])
 
 
+def _add_text(doc, page, text, size=14.0, x=72, y=700):
+    """Rigtig tekst med PDF'ens indbyggede Helvetica – kræver ingen skrifttyper på maskinen."""
+    obj = pdfium_c.FPDFPageObj_NewTextObj(doc, b"Helvetica", size)
+    utf16 = (text + "\0").encode("utf-16-le")
+    assert pdfium_c.FPDFText_SetText(
+        obj, (ctypes.c_ushort * (len(utf16) // 2)).from_buffer_copy(utf16)
+    )
+    pdfium_c.FPDFPageObj_Transform(obj, 1, 0, 0, 1, x, y)
+    pdfium_c.FPDFPage_InsertObject(page, obj)
+
+
 def _text_as_image(text: str) -> QImage:
-    """Tekst som pixels – sådan ser en scannet side ud for en PDF."""
-    image = QImage(1100, 300, QImage.Format.Format_RGB888)
-    image.fill(QColor("white"))
-    painter = QPainter(image)
-    font = QFont("DejaVu Sans")
-    font.setPixelSize(50)
-    painter.setFont(font)
-    painter.setPen(QColor("black"))
-    painter.drawText(30, 150, text)
-    painter.end()
+    """Tekst som pixels – sådan ser en scannet side ud for en PDF.
+
+    Tegnes med pdfium, ikke Qt: kører Qt uden skærm (offscreen) på Windows, findes
+    der ingen skrifttyper, og så bliver billedet tomt.
+    """
+    doc = pdfium.PdfDocument.new()
+    try:
+        page = doc.new_page(550, 150)
+        _add_text(doc, page, text, size=25, x=15, y=65)
+        page.gen_content()
+        bitmap = page.render(scale=2, rev_byteorder=True)
+        pixels = bitmap.to_numpy()
+        h, w = pixels.shape[:2]
+        fmt = QImage.Format.Format_RGB888
+        if pixels.shape[2] == 4:
+            fmt = QImage.Format.Format_RGBA8888
+        image = QImage(pixels.data, w, h, bitmap.stride, fmt).copy()  # copy: bitmap lukkes
+        bitmap.close()
+    finally:
+        doc.close()
+    assert pixels.min() < 100, "billedet er tomt – teksten blev ikke tegnet"
     return image
 
 
+def _add_image(doc, page, text, tmp):
+    """Tekst som pixels – sådan ser en scannet side ud for en PDF."""
+    jpeg = tmp / "scan.jpg"
+    assert _text_as_image(text).save(str(jpeg), "JPEG", 90)
+    image = pdfium.PdfImage.new(doc)
+    image.load_jpeg(str(jpeg), inline=True)
+    image.set_matrix(pdfium.PdfMatrix().scale(528, 144).translate(36, 600))
+    page.insert_obj(image)
+
+
 def make_pdf(path, pages):
-    """pages: liste af ("scannet" | "tekst", tekst)."""
-    writer = QPdfWriter(str(path))
-    writer.setPageSize(QPageSize(QPageSize.PageSizeId.A4))
-    writer.setResolution(150)
-    painter = QPainter(writer)
-    for i, (kind, text) in enumerate(pages):
-        if i:
-            writer.newPage()
-        if kind == "scannet":
-            painter.drawImage(50, 50, _text_as_image(text))
-        else:
-            font = QFont("DejaVu Sans")
-            font.setPointSize(14)
-            painter.setFont(font)
-            painter.drawText(100, 200, text)
-    painter.end()
+    """pages: liste af ("scannet" | "tekst", tekst). A4-sider."""
+    doc = pdfium.PdfDocument.new()
+    try:
+        for kind, text in pages:
+            page = doc.new_page(595, 842)
+            if kind == "scannet":
+                _add_image(doc, page, text, path.parent)
+            else:
+                _add_text(doc, page, text)
+            page.gen_content()
+        doc.save(str(path))
+    finally:
+        doc.close()
     return path
 
 
