@@ -221,11 +221,14 @@ class Toolbar(QWidget):
         if hasattr(self, "_more"):
             self._more.setVisible(not folded)
         if folded:
-            self._fold.setFixedWidth(ICON_SIZE + 8)
-            self._fold.setText("")
+            # Ikonet og en pil: så ligner fanen ikke knappen "Læs op"
+            self._fold.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+            self._fold.setFixedWidth(ICON_SIZE + 30)
+            self._fold.setText("›")
             self._fold.setIcon(self._app_icon)
             self._fold.setToolTip("Vis Ordhjælps knapper")
         else:
+            self._fold.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
             self._fold.setFixedWidth(20)
             self._fold.setIcon(QIcon())
             self._fold.setText("‹")
@@ -271,7 +274,10 @@ class Toolbar(QWidget):
         """Gør vinduet så lille som knapperne (også når nogle lige er skjult)."""
         self._row.activate()
         self.layout().activate()
-        self.resize(self.minimumSizeHint())
+        # Fast størrelse, ikke resize(): på Wayland kan skrivebordet ellers beholde den
+        # gamle bredde. Så passer vinduet og knapperne ikke sammen, og klik rammer forkert
+        # (den foldede fane kunne ikke foldes ud igen).
+        self.setFixedSize(self.minimumSizeHint())
 
     def _make_button(self, text: str, tooltip: str) -> QToolButton:
         button = QToolButton(self._frame)
