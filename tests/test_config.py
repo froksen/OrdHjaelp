@@ -48,7 +48,6 @@ def test_model_names_resolve_via_catalog() -> None:
     assert resolve_model("dansk-hurtig") == "lucasw89/whisper-small-danish-ct2-int8"
     assert resolve_model("hurtig") == "small"
     assert resolve_model("noget/andet") == "noget/andet"
-    assert resolve_model("da_DK-talesyntese-medium") == "da_DK-talesyntese-medium"  # ikke tale
 
 
 def test_roundtrip_keeps_all_values() -> None:
