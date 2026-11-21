@@ -1,4 +1,5 @@
 ﻿# Byg Windows-installeren: dist\Ordhjaelp-<version>-Setup.exe
+# og zip-filen til at pakke ud og køre: dist\Ordhjaelp-<version>-Windows.zip
 #
 # Kræver uv og Inno Setup 6 (winget install JRSoftware.InnoSetup).
 # Brug (fra repoets rod eller herfra):  powershell -File packaging\windows\build-installer.ps1
@@ -62,6 +63,16 @@ Write-Host "== Røgtest: kan programmet starte og svare?"
 $exe = Join-Path $root "dist\Ordhjaelp\Ordhjaelp.exe"
 $proc = Start-Process $exe -ArgumentList "--help" -PassThru -Wait
 if ($proc.ExitCode -ne 0) { throw "Ordhjaelp.exe --help fejlede ($($proc.ExitCode))" }
+
+Write-Host "== Zip-fil (pak ud og kør, uden installation)"
+Copy-Item (Join-Path $here "LAES-MIG.txt") (Join-Path $root "dist\Ordhjaelp\LAES-MIG.txt")
+$zip = Join-Path $root "dist\Ordhjaelp-$version-Windows.zip"
+if (Test-Path $zip) { Remove-Item $zip }
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+# Med mappen Ordhjaelp\ øverst, så alt havner i én mappe, når den pakkes ud
+[IO.Compression.ZipFile]::CreateFromDirectory(
+  (Join-Path $root "dist\Ordhjaelp"), $zip, [IO.Compression.CompressionLevel]::Optimal, $true)
+Write-Host "Zip: dist\Ordhjaelp-$version-Windows.zip"
 
 if ($SkipInstaller) { Write-Host "Færdig: dist\Ordhjaelp\"; exit 0 }
 

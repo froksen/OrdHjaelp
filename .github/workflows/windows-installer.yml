@@ -1,7 +1,7 @@
 name: Windows-installer
 
-# Bygger dist/Ordhjaelp-<version>-Setup.exe.
-# - Ved en tag som v0.3.0 lægges installeren på GitHub-udgivelsen.
+# Bygger dist/Ordhjaelp-<version>-Setup.exe og dist/Ordhjaelp-<version>-Windows.zip.
+# - Ved en tag som v0.3.0 lægges begge på GitHub-udgivelsen.
 # - Ellers kan den hentes under "Artifacts" på workflow-kørslen.
 on:
   push:
@@ -52,18 +52,36 @@ jobs:
           if ($proc.ExitCode -ne 0) { throw "Ordhjaelp.exe --help fejlede" }
           $uninstall = "$env:LOCALAPPDATA\Programs\Ordhjaelp\unins000.exe"
           Start-Process $uninstall -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES" -Wait
+      - name: Afprøv zip-filen (pak ud og kør)
+        shell: pwsh
+        run: |
+          $zip = Get-ChildItem dist\Ordhjaelp-*-Windows.zip | Select-Object -First 1
+          $dest = Join-Path $env:RUNNER_TEMP "zip-test"
+          Expand-Archive $zip.FullName -DestinationPath $dest
+          $exe = Join-Path $dest "Ordhjaelp\Ordhjaelp.exe"
+          foreach ($file in "Ordhjaelp.exe", "LAES-MIG.txt", "tools\hunspell\hunspell.exe", "tools\tesseract\tesseract.exe") {
+            if (-not (Test-Path (Join-Path $dest "Ordhjaelp\$file"))) { throw "$file mangler i zip-filen" }
+          }
+          $proc = Start-Process $exe -ArgumentList "--help" -PassThru -Wait
+          if ($proc.ExitCode -ne 0) { throw "Ordhjaelp.exe fra zip-filen fejlede" }
       - uses: actions/upload-artifact@v4
         with:
           name: Ordhjaelp-Setup
           path: dist/Ordhjaelp-*-Setup.exe
           if-no-files-found: error
-      - name: Læg installeren på udgivelsen
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ordhjaelp-Windows-zip
+          path: dist/Ordhjaelp-*-Windows.zip
+          if-no-files-found: error
+          compression-level: 0 # er allerede pakket
+      - name: Læg installeren og zip-filen på udgivelsen
         if: startsWith(github.ref, 'refs/tags/v')
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $setup = (Get-ChildItem dist\Ordhjaelp-*-Setup.exe | Select-Object -First 1).FullName
+          $files = (Get-ChildItem dist\Ordhjaelp-*-Setup.exe, dist\Ordhjaelp-*-Windows.zip).FullName
           gh release view $env:GITHUB_REF_NAME 2>$null
           if ($LASTEXITCODE) { gh release create $env:GITHUB_REF_NAME --title "Ordhjælp $env:GITHUB_REF_NAME" --generate-notes }
-          gh release upload $env:GITHUB_REF_NAME $setup --clobber
+          gh release upload $env:GITHUB_REF_NAME @files --clobber
