@@ -40,6 +40,7 @@ hvor linjen lå (dog ikke på Wayland, hvor skrivebordet selv vælger pladsen). 
 **⋯** ligger indstillinger, genveje og Luk. Foretrækker man et ikon for hver funktion
 ved uret, vælges det i indstillingerne under **Knapper**.
 | 🖱️ | **Læs ved markering** | Dobbeltklik på et ord, og det læses op. Trippelklik læser linjen eller afsnittet (slås til i indstillingerne) |
+| 📄 | **Gør en PDF søgbar** | Højreklik på det **blå ikon** → **Gør en PDF søgbar**, og vælg en scannet PDF. Der kommer en kopi, hvor teksten kan markeres og læses op (slås til i indstillingerne) |
 
 ### Ordforslag
 
@@ -75,6 +76,16 @@ tilgængeligheds-API'en **AT-SPI**, den samme som skærmlæseren Orca.
 - Virker ikke i billeder, scannede PDF'er og spil. Brug **Læs fra skærmen** dér
 - På Wayland kræver det **KDE Plasma**: KWin fortæller, hvor musen er. På X11 bruges `xdotool`
 - Genvejene registreres ved start, så Ordhjælp genstarter, når funktionen slås til eller fra
+
+### Gør en PDF søgbar
+
+En scannet PDF er bare billeder af sider. Teksten kan ikke markeres, så den kan
+ikke læses op. Ordhjælp finder teksten med Tesseract og laver en kopi med et
+usynligt tekstlag oven på siderne. Siderne ser ud som før.
+
+- Kopien hedder fx `Opgave (søgbar).pdf` og ligger samme sted som originalen. Originalen ændres ikke
+- Sider, der allerede har tekst, kopieres uændret. Kun scannede sider får tekstgenkendelse
+- Det tager et par sekunder pr. side. Man kan trykke **Stop** undervejs
 
 ### Indstillinger
 
@@ -241,7 +252,8 @@ trænes eller konverteres ikke egne modeller. Vedligeholdet ligger på selve pro
 | Oplæsning | [Piper](https://github.com/OHF-Voice/piper1-gpl) med stemmen `da_DK-talesyntese-medium` | GPL-3.0 (Piper) / CC0 (stemmens træningsdata) |
 | Diktering (standard) | [faster-whisper](https://github.com/SYSTRAN/faster-whisper) (MIT) med [`lucasw89/whisper-small-danish-ct2-int8`](https://huggingface.co/lucasw89/whisper-small-danish-ct2-int8) (dansk udgave af Whisper small) | MIT |
 | Diktering (valgfrit) | [`q-henric/whisper-large-v3-turbo-danish-ct2`](https://huggingface.co/q-henric/whisper-large-v3-turbo-danish-ct2), CoRal [røst-v3](https://huggingface.co/pluttodk/roest-v3-whisper-1.5b-ct2), OpenAI Whisper small/turbo | MIT / OpenRAIL |
-| Tekst fra skærmen | [Tesseract](https://github.com/tesseract-ocr/tesseract) med den danske sprogpakke | Apache-2.0 |
+| Tekst fra skærmen og søgbare PDF'er | [Tesseract](https://github.com/tesseract-ocr/tesseract) med den danske sprogpakke | Apache-2.0 |
+| Læse og samle PDF'er | [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) med PDFium | Apache-2.0 / BSD-3-Clause |
 | Ordforslag – hyppighed | [wordfreq](https://github.com/rspeer/wordfreq) (dansk) | Apache-2.0 (kode) / CC-BY-SA-4.0 (data) |
 | Ordforslag – ordbog | Den danske Hunspell-ordbog fra [Stavekontrolden.dk](https://stavekontrolden.dk) | GPL-2.0+ / LGPL-2.1+ / MPL-1.1 |
 
@@ -263,7 +275,7 @@ src/ordhjaelp/
 ├── ordmotor/       ordforslag: ordliste, danske lydregler, rangering
 ├── tts/            oplæsning (Piper)
 ├── stt/            talegenkendelse (faster-whisper)
-├── ocr/            tekstgenkendelse (Tesseract)
+├── ocr/            tekstgenkendelse (Tesseract), søgbare PDF'er
 ├── audio/          afspilning, optagelse, lydsignaler
 ├── ui/             ikoner ved uret, markering af skærmudsnit, indstillinger (Qt)
 ├── platform/       ALT styresystem-specifikt

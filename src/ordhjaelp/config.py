@@ -57,6 +57,7 @@ class Config:
     dictation_enabled: bool = True
     dictation_model: str = "dansk-hurtig"
     prediction_enabled: bool = True
+    pdf_ocr_enabled: bool = False
     hotkeys: dict[str, str] = field(
         default_factory=lambda: {
             "laes": "CTRL+ALT+L",
@@ -98,6 +99,7 @@ class Config:
         cfg.dictation_model = str(dictation.get("model", cfg.dictation_model))
         prediction = raw.get("ordforslag", {})
         cfg.prediction_enabled = bool(prediction.get("aktiv", cfg.prediction_enabled))
+        cfg.pdf_ocr_enabled = bool(raw.get("pdf", {}).get("soegbar", False))
         cfg.hotkeys.update({str(k): str(v) for k, v in raw.get("genveje", {}).items()})
         icons = dict(raw.get("ikoner", {}))
         icons.pop("altid_synlige", None)  # fra version 0.2 (virkede ikke), er ikke et ikon
@@ -154,6 +156,11 @@ aktiv = {b(self.prediction_enabled)}
 # Hvor knapperne vises: "knaplinje" (en lille linje på skærmen, standard)
 # eller "ikoner" (et ikon for hver funktion ved uret)
 knapper = {s(self.view)}
+
+[pdf]
+# "Gør en PDF søgbar" i menuen (⋯ i knaplinjen og det blå ikon): teksten i en scannet PDF
+# bliver til rigtig tekst, så den kan markeres og læses op.
+soegbar = {b(self.pdf_ocr_enabled)}
 
 [ikoner]
 # Hvilke knapper der vises (dikter = mikrofon, skaerm = læs fra skærmen)

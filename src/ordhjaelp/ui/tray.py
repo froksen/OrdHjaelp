@@ -99,6 +99,12 @@ class TrayApp:
         menu.addAction(self._act_read)
         menu.addAction(self._act_stop)
         menu.addSeparator()
+        # Slået fra som standard – slås til i indstillingerne
+        self._act_pdf = QAction("Gør en PDF søgbar …", menu)
+        self._act_pdf.triggered.connect(self.open_pdf_ocr)
+        self._act_pdf.setVisible(bool(settings and settings.config.pdf_ocr_enabled))
+        menu.addAction(self._act_pdf)
+        self._pdf_jobs: list = []  # behold referencer, mens de kører
         act_keys = QAction("Genveje …", menu)
         act_keys.triggered.connect(self.open_shortcuts)
         menu.addAction(act_keys)
@@ -117,6 +123,7 @@ class TrayApp:
         if settings is not None:
             settings.set_icon_visible = self.set_icon_visible
             settings.set_view = self.set_view
+            settings.set_pdf_ocr = self._act_pdf.setVisible
             act_settings = QAction("Indstillinger …", menu)
             act_settings.triggered.connect(self.open_settings)
             menu.addAction(act_settings)
@@ -285,6 +292,18 @@ class TrayApp:
         self._shortcuts_dialog.show()
         self._shortcuts_dialog.raise_()
         self._shortcuts_dialog.activateWindow()
+
+    def open_pdf_ocr(self) -> None:
+        from ordhjaelp.ui.pdf_ocr import PdfOcrJob, choose_pdf
+
+        src = choose_pdf()
+        if src is None:
+            return
+        job = PdfOcrJob(src)
+        job.dialog.setWindowIcon(self._icon_idle)
+        job.on_done = lambda: self._pdf_jobs.remove(job)
+        self._pdf_jobs.append(job)
+        job.start()
 
     def set_icon_visible(self, name: str, visible: bool) -> None:
         if self._settings is not None:

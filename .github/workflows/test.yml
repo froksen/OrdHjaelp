@@ -22,7 +22,7 @@ jobs:
           sudo apt-get update -q
           sudo apt-get install -y -q libegl1 libgl1 libxkbcommon0 libfontconfig1 libdbus-1-3 \
             libportaudio2 hunspell hunspell-da at-spi2-core xvfb xdotool dbus-x11 \
-            python3-gi gir1.2-gtk-3.0
+            python3-gi gir1.2-gtk-3.0 tesseract-ocr tesseract-ocr-dan
       - run: uv sync
       - run: uv run ruff check .
       - run: uv run ruff format --check .
@@ -51,6 +51,15 @@ jobs:
           }
           "C:\msys64\mingw64\bin" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
           "DICPATH=$dict" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+      - name: Tesseract med dansk sprogpakke (søgbare PDF'er)
+        shell: pwsh
+        run: |
+          C:\msys64\usr\bin\pacman.exe -Sy --noconfirm --needed mingw-w64-x86_64-tesseract-ocr
+          $tessdata = Join-Path $env:RUNNER_TEMP "tessdata"
+          New-Item -ItemType Directory -Force -Path $tessdata | Out-Null
+          Invoke-WebRequest -OutFile (Join-Path $tessdata "dan.traineddata") `
+            -Uri "https://github.com/tesseract-ocr/tessdata_fast/raw/4.1.0/dan.traineddata"
+          "TESSDATA_PREFIX=$tessdata" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
       - run: uv sync
       - run: uv run pytest -q
         env:
