@@ -25,6 +25,9 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("afslut", help="luk Ordhjælp helt")
     sub.add_parser("dikter", help="start/stop diktering")
     sub.add_parser("skaerm", help="læs tekst fra et udsnit af skærmen")
+    sub.add_parser("laes-ord", help="læs ordet under musen")
+    sub.add_parser("laes-saetning", help="læs sætningen under musen")
+    sub.add_parser("laes-herfra", help="læs fra musen og videre")
     p_cmp = sub.add_parser("sammenlign-modeller", help="test talegenkendelse med din egen stemme")
     p_cmp.add_argument("--fil", help="brug en gemt optagelse i stedet for mikrofonen")
     p_cmp.add_argument("modeller", nargs="*", help="modeller (standard: alle)")
@@ -92,7 +95,7 @@ def main(argv: list[str] | None = None) -> int:
         print("Kører" if running else "Kører ikke", f"(indstillinger: {config_path()})")
         return 0 if running else 1
 
-    request: ipc.Request = {"cmd": args.cmd}
+    request: ipc.Request = {"cmd": args.cmd.replace("-", "_")}
     if args.cmd == "sig":
         request["tekst"] = " ".join(args.tekst)
     try:

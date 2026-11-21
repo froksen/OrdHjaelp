@@ -9,6 +9,7 @@ from ordhjaelp.platform.base import (
     HotkeyProvider,
     InputMethod,
     PlatformNotSupported,
+    PointerText,
     ScreenCapture,
     SelectionProvider,
     TextInjector,
@@ -47,6 +48,14 @@ def get_screen_capture() -> ScreenCapture:
     raise PlatformNotSupported(f"Skærmbilleder understøttes endnu ikke på {sys.platform}")
 
 
+def get_pointer_text() -> PointerText:
+    if sys.platform.startswith("linux"):
+        from ordhjaelp.platform.linux.pointer import LinuxPointerText
+
+        return LinuxPointerText()
+    raise PlatformNotSupported(f"Læs under musen understøttes endnu ikke på {sys.platform}")
+
+
 def get_autostart() -> Autostart:
     if sys.platform.startswith("linux"):
         from ordhjaelp.platform.linux.install import LinuxAutostart
@@ -67,6 +76,7 @@ __all__ = [
     "get_input_method",
     "get_autostart",
     "get_hotkey_provider",
+    "get_pointer_text",
     "get_screen_capture",
     "get_selection_provider",
     "get_text_injector",

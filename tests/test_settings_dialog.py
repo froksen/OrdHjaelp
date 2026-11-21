@@ -87,3 +87,17 @@ def test_needs_restart() -> None:
     assert needs_restart(a, Config(dictation_enabled=False))
     assert needs_restart(a, Config(dictation_model="turbo"))
     assert needs_restart(a, Config(prediction_enabled=False))
+
+
+def test_read_at_pointer_needs_restart() -> None:
+    assert needs_restart(Config(), Config(read_at_pointer=True))
+
+
+def test_read_at_pointer_checkbox_saves(app, hooks) -> None:
+    h, calls, tmp = hooks
+    d = SettingsDialog(h)
+    assert d.read_at_pointer.isChecked() is False  # slået fra som standard
+    d.read_at_pointer.setChecked(True)
+    d.accept()
+    assert Config.from_toml((tmp / "config.toml").read_text()).read_at_pointer is True
+    assert calls["restart"] == 1  # genvejene registreres ved start

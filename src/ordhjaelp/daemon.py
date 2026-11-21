@@ -17,18 +17,23 @@ from ordhjaelp.platform import (
     get_autostart,
     get_hotkey_provider,
     get_input_method,
+    get_pointer_text,
     get_screen_capture,
     get_selection_provider,
     get_text_injector,
 )
 from ordhjaelp.platform.base import HotkeyProvider
 from ordhjaelp.services.dictation import DictationService
+from ordhjaelp.services.pointer_read import UNITS, PointerReadService
 from ordhjaelp.services.read_aloud import ReadAloudService
 from ordhjaelp.services.screen_read import ScreenReadService
 from ordhjaelp.services.word_prediction import WordPredictionService
 from ordhjaelp.tts.piper_engine import PiperEngine, ensure_voice
 
 log = logging.getLogger(__name__)
+
+# Kommandoer og genveje til læs under musen -> hvad der skal læses
+POINTER_COMMANDS = {f"laes_{unit}": unit for unit in UNITS}
 
 
 def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
@@ -43,6 +48,7 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
     )
     dictation = _make_dictation(cfg, service) if cfg.dictation_enabled else None
     screen = _make_screen_reader(service)
+    pointer = _make_pointer_reader(service) if cfg.read_at_pointer else None
     prediction = WordPredictionService(lexicon_path(), learned_words_path())
     prediction.load_in_background()
     # Handlinger som kun brugerfladen kan udføre (fx vise markeringsoverlay)
@@ -64,6 +70,15 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
             return {"ok": True, "forslag": prediction.suggest(str(req.get("ord", "")))}
         if cmd == "skrevet":  # fra ordforslag: et ord og/eller en sætning er skrevet færdig
             return {"ok": True, "laeser": _read_while_typing(cfg, service, req)}
+        if cmd in POINTER_COMMANDS:
+            if pointer is None:
+                return {"ok": False, "fejl": "Læs under musen er slået fra i indstillingerne"}
+            # Egen tråd: genveje kommer fra portal-tråden, som ikke må vente på AT-SPI
+            threading.Thread(
+                target=pointer.read, args=(POINTER_COMMANDS[cmd],), daemon=True,
+                name="pointer-read",
+            ).start()  # fmt: skip
+            return {"ok": True}
         if cmd == "laer":
             prediction.learn(str(req.get("ord", "")))
             return {"ok": True}
@@ -102,6 +117,9 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
                 bindings.pop("dikter", None)
             if screen is None:
                 bindings.pop("skaerm", None)
+            if pointer is None:
+                for name in POINTER_COMMANDS:
+                    bindings.pop(name, None)
             hk.start(bindings, lambda action: handle({"cmd": action}))
             hk_holder.append(hk)
             log.info("Globale genveje er aktive")
@@ -214,6 +232,16 @@ def _preload(engine) -> None:  # noqa: ANN001
         engine.preload()
     except Exception:
         log.exception("Kunne ikke indlæse talegenkendelse")
+
+
+def _make_pointer_reader(service: ReadAloudService) -> PointerReadService | None:
+    try:
+        provider = get_pointer_text()
+    except PlatformNotSupported as exc:
+        log.warning("Læs under musen er ikke tilgængelig: %s", exc)
+        return None
+    threading.Thread(target=provider.prepare, daemon=True, name="pointer-prepare").start()
+    return PointerReadService(provider, say=service.say)
 
 
 def _make_screen_reader(service: ReadAloudService) -> ScreenReadService | None:
