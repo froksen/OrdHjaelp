@@ -24,6 +24,8 @@ from ordhjaelp.config import data_dir
 
 # Findes filen, er beskeden ved første start allerede vist
 SHOWN_MARKER = "ikoner-ved-uret-vist"
+# Findes filen, åbnes vejledningen, så snart ikonerne er vist (valgt i velkomstvinduet)
+REQUEST_MARKER = "ikoner-ved-uret-vejledning"
 
 TIP_TITLE = "Ordhjælp kører"
 TIP_TEXT = (
@@ -54,6 +56,25 @@ def remember_first_run_tip() -> None:
     marker = first_run_marker()
     marker.parent.mkdir(parents=True, exist_ok=True)
     marker.touch()
+
+
+def request_help_on_start(wanted: bool) -> None:
+    """Valgt i velkomstvinduet: vis vejledningen ved start (ellers ingen besked)."""
+    remember_first_run_tip()  # velkomstvinduet har allerede spurgt
+    marker = data_dir() / REQUEST_MARKER
+    if wanted:
+        marker.touch()
+    else:
+        marker.unlink(missing_ok=True)
+
+
+def take_help_request() -> bool:
+    """True én gang, hvis vejledningen skal åbnes nu."""
+    marker = data_dir() / REQUEST_MARKER
+    if not marker.exists():
+        return False
+    marker.unlink(missing_ok=True)
+    return True
 
 
 def _steps(steps: list[str]) -> QLabel:

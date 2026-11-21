@@ -220,6 +220,9 @@ class TrayApp:
         from ordhjaelp.ui import tray_help
 
         try:
+            if tray_help.take_help_request():  # valgt i velkomstvinduet
+                self.open_tray_help()
+                return
             if not tray_help.should_show_first_run_tip():
                 return
             tray_help.remember_first_run_tip()

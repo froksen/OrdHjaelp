@@ -7,6 +7,7 @@ i administrationen (fra indstillingerne) henter og sletter man enkeltvis.
 from __future__ import annotations
 
 import logging
+import sys
 import threading
 from collections.abc import Callable
 
@@ -16,6 +17,7 @@ from PySide6.QtWidgets import (
     QDialog,
     QFrame,
     QGridLayout,
+    QGroupBox,
     QHBoxLayout,
     QLabel,
     QMessageBox,
@@ -29,6 +31,7 @@ from PySide6.QtWidgets import (
 from ordhjaelp.config import Config, save_config
 from ordhjaelp.models.catalog import CATALOG, Kind, ModelInfo, of_kind, size_text
 from ordhjaelp.models.store import ModelStore
+from ordhjaelp.platform.base import Autostart
 
 log = logging.getLogger(__name__)
 
@@ -126,13 +129,58 @@ class _ModelList(QScrollArea):
 
 
 # -- velkomstvindue ved første start ----------------------------------------
-class FirstRunDialog(QDialog):
-    """Vælg hvilke sprogmodeller der skal hentes, før Ordhjælp kan bruges."""
+class _BasicSettings(QGroupBox):
+    """Grundindstillingerne, så alt det vigtigste kan vælges første gang."""
 
-    def __init__(self, store: ModelStore, cfg: Config) -> None:
+    def __init__(self, cfg: Config, autostart: Autostart | None) -> None:
+        super().__init__("Grundindstillinger (kan ændres senere under Indstillinger)")
+        grid = QGridLayout(self)
+        self.autostart = QCheckBox("Start Ordhjælp, når der logges ind")
+        self.autostart.setChecked(autostart is not None)
+        self.autostart.setVisible(autostart is not None)
+        self.prediction = QCheckBox("Vis ordforslag, mens der skrives")
+        self.prediction.setChecked(cfg.prediction_enabled)
+        self.read_word = QCheckBox("Læs ordet op ved mellemrum")
+        self.read_word.setChecked(cfg.read_word_on_space)
+        self.read_sentence = QCheckBox("Læs sætningen op ved punktum")
+        self.read_sentence.setChecked(cfg.read_sentence_on_period)
+        self.read_on_select = QCheckBox("Læs op, når der markeres tekst")
+        self.read_on_select.setChecked(cfg.read_on_select)
+        self.read_at_pointer = QCheckBox("Læs under musen med genveje")
+        self.read_at_pointer.setChecked(cfg.read_at_pointer)
+        # Windows 11 gemmer nye ikoner under ^. Kun brugeren kan vise dem, så
+        # Ordhjælp viser vejledningen lige efter start, når ikonerne findes.
+        self.tray_icons = QCheckBox("Vis Ordhjælps ikoner ved uret (ikke gemt under ^)")
+        self.tray_icons.setChecked(True)
+        self.tray_icons.setVisible(sys.platform == "win32")
+        boxes = [
+            self.autostart,
+            self.prediction,
+            self.read_word,
+            self.read_sentence,
+            self.read_on_select,
+            self.read_at_pointer,
+        ]
+        for i, box in enumerate(boxes):
+            grid.addWidget(box, i // 2, i % 2)
+        grid.addWidget(self.tray_icons, len(boxes) // 2, 0, 1, 2)
+
+    def apply(self, cfg: Config) -> None:
+        cfg.prediction_enabled = self.prediction.isChecked()
+        cfg.read_word_on_space = self.read_word.isChecked()
+        cfg.read_sentence_on_period = self.read_sentence.isChecked()
+        cfg.read_on_select = self.read_on_select.isChecked()
+        cfg.read_at_pointer = self.read_at_pointer.isChecked()
+
+
+class FirstRunDialog(QDialog):
+    """Velkomst: vælg sprogmodeller og grundindstillinger, før Ordhjælp bruges første gang."""
+
+    def __init__(self, store: ModelStore, cfg: Config, autostart: Autostart | None = None) -> None:
         super().__init__()
         self._store = store
         self._cfg = cfg
+        self._autostart = autostart
         self._queue: list[ModelInfo] = []
         self._total_mb = 0
         self._done_mb = 0
@@ -148,6 +196,9 @@ class FirstRunDialog(QDialog):
         layout.addWidget(intro)
 
         self.list = _ModelList(choose=True)
+        # Listen kan rulles: lad den give plads, så vinduet passer på små skærme
+        # (skole-pc'er med 1366x768 og 125 % har kun ca. 614 punkter i højden)
+        self.list.setMinimumHeight(160)
         layout.addWidget(self.list, 1)
         self._installed: set[str] = set()
         for row in self.list.rows.values():
@@ -169,6 +220,9 @@ class FirstRunDialog(QDialog):
             only.check.setEnabled(False)
             if not only.status.text():
                 only.status.setText("Påkrævet")
+
+        self.basics = _BasicSettings(cfg, autostart)
+        layout.addWidget(self.basics)
 
         self.summary = QLabel()
         self.overall = QProgressBar()
@@ -192,6 +246,15 @@ class FirstRunDialog(QDialog):
         self._downloader.progress.connect(self._on_progress)
         self._downloader.finished.connect(self._on_finished)
         self._update_summary()
+        self._fit_to_screen()
+
+    def _fit_to_screen(self) -> None:
+        """Så højt som indholdet, men aldrig højere end skærmen."""
+        size = self.sizeHint()
+        screen = self.screen()
+        if screen is not None:
+            size.setHeight(min(size.height(), int(screen.availableGeometry().height() * 0.9)))
+        self.resize(size)
 
     def chosen(self, only_missing: bool = False) -> list[ModelInfo]:
         result = []
@@ -267,7 +330,20 @@ class FirstRunDialog(QDialog):
             self._cfg.dictation_enabled = True
         else:
             self._cfg.dictation_enabled = False
+        self.basics.apply(self._cfg)
         save_config(self._cfg)
+        if self._autostart is not None:
+            try:
+                self._autostart.set_enabled(self.basics.autostart.isChecked())
+            except OSError as exc:
+                log.warning("Kunne ikke ændre autostart: %s", exc)
+        if sys.platform == "win32":
+            from ordhjaelp.ui import tray_help
+
+            try:
+                tray_help.request_help_on_start(self.basics.tray_icons.isChecked())
+            except OSError as exc:
+                log.warning("Kunne ikke huske valget om ikonerne: %s", exc)
         self.accept()
 
     def reject(self) -> None:  # noqa: D102

@@ -268,7 +268,11 @@ def _ensure_models(cfg: Config, ui: bool) -> bool:
     if not needs_first_run(store, cfg):
         return True
     QApplication.instance() or QApplication([])
-    dialog = FirstRunDialog(store, cfg)
+    try:
+        autostart = get_autostart()
+    except PlatformNotSupported:
+        autostart = None
+    dialog = FirstRunDialog(store, cfg, autostart)
     return dialog.exec() == QDialog.DialogCode.Accepted
 
 
