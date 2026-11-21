@@ -29,13 +29,14 @@ from ordhjaelp.config import Config, save_config
 from ordhjaelp.models.catalog import Kind, of_kind, size_text
 from ordhjaelp.models.store import ModelStore
 from ordhjaelp.platform.base import Autostart, TypingSetup
+from ordhjaelp.ui.shortcuts import POINTER_ACTIONS, shortcut_for
 from ordhjaelp.ui.typing_setup import OK_COLOR, TypingSetupDialog, all_ok, summary
 
 log = logging.getLogger(__name__)
 
 PREVIEW_TEXT = "Hej! Sådan lyder jeg, når jeg læser op for dig."
 KEYS_HELP_LINUX = "Tastaturgenveje ændres i Systemindstillinger →\nTastaturgenveje → Ordhjælp."
-KEYS_HELP_WINDOWS = "Tastaturgenveje ændres under [genveje] i indstillingsfilen (config.toml)."
+KEYS_HELP_WINDOWS = "Tastaturgenveje ændres under [genveje]\ni indstillingsfilen (config.toml)."
 
 
 @dataclass
@@ -118,9 +119,10 @@ class SettingsDialog(QDialog):
         form.addRow(self.read_at_pointer)
         # Faste linjeskift, aldrig setWordWrap: en QLabel med automatisk linjeskift
         # får Qt til at gøre vinduet for smalt, så tekst klippes eller forsvinder
+        keys = {a: shortcut_for(cfg.hotkeys, a) for a in POINTER_ACTIONS}
         note = QLabel(
-            "Peg med musen og tryk Ctrl+Alt+1 (ordet), Ctrl+Alt+2 (sætningen)\n"
-            "eller Ctrl+Alt+3 (herfra og videre). Virker fx i "
+            f"Peg med musen og tryk {keys['laes_ord']} (ordet), {keys['laes_saetning']} "
+            f"(sætningen)\neller {keys['laes_herfra']} (herfra og videre). Virker fx i "
             + ("Word, Edge og Notesblok." if sys.platform == "win32" else "Firefox og LibreOffice.")
         )
         note.setStyleSheet("color: gray")
@@ -183,9 +185,15 @@ class SettingsDialog(QDialog):
             self.autostart.setChecked(hooks.autostart.is_enabled())
         layout.addWidget(self.autostart)
 
-        keys = QLabel(KEYS_HELP_WINDOWS if sys.platform == "win32" else KEYS_HELP_LINUX)
-        keys.setStyleSheet("color: gray")
-        layout.addWidget(keys)
+        keys_row = QHBoxLayout()
+        keys_label = QLabel(KEYS_HELP_WINDOWS if sys.platform == "win32" else KEYS_HELP_LINUX)
+        keys_label.setStyleSheet("color: gray")
+        keys_row.addWidget(keys_label, 1)
+        show_keys = QPushButton("Vis alle genveje …")
+        show_keys.setToolTip("Oversigt over alle genveje og tasterne til ordforslag")
+        show_keys.clicked.connect(self._open_shortcuts)
+        keys_row.addWidget(show_keys)
+        layout.addLayout(keys_row)
 
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
@@ -252,6 +260,11 @@ class SettingsDialog(QDialog):
             text, color = summary(checks)
         self.typing_status.setText(text)
         self.typing_status.setStyleSheet(f"color: {color}")
+
+    def _open_shortcuts(self) -> None:
+        from ordhjaelp.ui.shortcuts import ShortcutsDialog
+
+        ShortcutsDialog(self.collect(), self).exec()
 
     def _open_typing_setup(self) -> None:
         assert self._hooks.typing_setup is not None
