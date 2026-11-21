@@ -1,9 +1,11 @@
 import os
+import time
 
 import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PySide6.QtCore import QPoint, QRect, QSize, Qt  # noqa: E402
+from PySide6.QtGui import QIcon  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 from ordhjaelp.config import VIEW_TOOLBAR, VIEW_TRAY, Config  # noqa: E402
@@ -192,3 +194,39 @@ def test_toolbar_remembers_place_and_fold(app, own_config_dir) -> None:
     again.show_toolbar()  # "Vis knaplinjen" i menuen folder den ud igen
     assert not again.toolbar.folded
     again.toolbar.hide()
+
+
+def _bar_with_placer(answers):
+    from ordhjaelp.ui.toolbar import Toolbar
+
+    calls = []
+
+    def placer(title, margin):
+        calls.append((title, margin))
+        return answers.pop(0)
+
+    return Toolbar(QIcon(), wayland_placer=placer), calls
+
+
+def test_wayland_asks_desktop_to_place_bar_in_corner(app, monkeypatch) -> None:
+    """Wayland ignorerer move(): skrivebordet bedes flytte linjen. Prøver igen én gang."""
+    from ordhjaelp.ui import toolbar as toolbar_mod
+
+    monkeypatch.setattr(toolbar_mod, "_is_wayland", lambda: True)
+    monkeypatch.setattr(toolbar_mod, "WAYLAND_PLACE_DELAYS", (0, 0))
+    bar, calls = _bar_with_placer([False, True])
+    bar.show_at_saved_place()
+    deadline = time.monotonic() + 3
+    while len(calls) < 2 and time.monotonic() < deadline:
+        time.sleep(0.01)
+    assert calls == [("Ordhjælp", toolbar_mod.MARGIN)] * 2
+
+
+def test_without_wayland_qt_places_bar_itself(app, monkeypatch) -> None:
+    from ordhjaelp.ui import toolbar as toolbar_mod
+
+    monkeypatch.setattr(toolbar_mod, "_is_wayland", lambda: False)
+    bar, calls = _bar_with_placer([True])
+    bar.show_at_saved_place()
+    time.sleep(0.05)
+    assert calls == []

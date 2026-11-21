@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import sys
 
 from ordhjaelp.platform.base import (
@@ -137,7 +138,28 @@ def open_tray_icon_settings() -> bool:
     return False
 
 
+def move_window_to_corner(caption: str, margin: int) -> bool:
+    """Flyt vinduet nederst til højre over opgavelinjen, hvor programmet ikke selv må.
+
+    Bruges på Wayland, hvor Qt's move() ignoreres. Virker på KDE Plasma (KWin).
+    Returnerer False, hvor det ikke kan lade sig gøre (fx GNOME). Venter på
+    D-Bus, så kald den ikke fra Qt's hovedtråd.
+    """
+    if sys.platform.startswith("linux"):
+        import asyncio
+
+        from ordhjaelp.platform.linux.kwin_place import move_to_corner
+
+        try:
+            return asyncio.run(move_to_corner(caption, margin))
+        except Exception as exc:  # noqa: BLE001 - placeringen er en hjælp, ikke vigtig
+            logging.getLogger(__name__).debug("KWin kunne ikke flytte %s: %s", caption, exc)
+            return False
+    return False
+
+
 __all__ = [
+    "move_window_to_corner",
     "open_tray_icon_settings",
     "get_input_method",
     "get_typing_setup",

@@ -34,9 +34,10 @@ til Windows og macOS.
 
 ### Knaplinjen
 
-Knapperne ligger i en lille knaplinje nederst til højre på skærmen. Træk i prikkerne (⠿)
-for at flytte den, og klik på **‹** for at folde den ind til en lille fane. Ordhjælp husker,
-hvor linjen lå (dog ikke på Wayland, hvor skrivebordet selv vælger pladsen). Under
+Knapperne ligger i en lille knaplinje nederst til højre på skærmen, lige over
+opgavelinjen. Træk i prikkerne (⠿) for at flytte den, og klik på **‹** for at folde den
+ind til en lille fane. Ordhjælp husker, hvor linjen lå. På Wayland huskes pladsen ikke,
+og linjen starter altid nederst til højre (på GNOME vælger skrivebordet selv pladsen). Under
 **⋯** ligger indstillinger, genveje og Luk. Foretrækker man et ikon for hver funktion
 ved uret, vælges det i indstillingerne under **Knapper**.
 | 🖱️ | **Læs ved markering** | Dobbeltklik på et ord, og det læses op. Trippelklik læser linjen eller afsnittet (slås til i indstillingerne) |

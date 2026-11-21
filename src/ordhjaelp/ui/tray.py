@@ -186,9 +186,15 @@ class TrayApp:
 
     def _build_toolbar(self, hotkeys: dict[str, str] | None) -> None:
         """Knaplinjen med de samme funktioner som ikonerne ved uret."""
+        from ordhjaelp.platform import move_window_to_corner
         from ordhjaelp.ui.toolbar import Toolbar, tooltip_with_key
 
-        bar = Toolbar(self._icon_idle, self._menu, config.config_dir() / "knaplinje.json")
+        bar = Toolbar(
+            self._icon_idle,
+            self._menu,
+            config.config_dir() / "knaplinje.json",
+            wayland_placer=move_window_to_corner,
+        )
         self._read_tip = tooltip_with_key("Læs markeret tekst op", hotkeys, "laes")
         self._stop_tip = tooltip_with_key("Stop oplæsningen", hotkeys, "stop")
         bar.add_button("laes", self._icon_idle, self._read_tip, self._service.toggle)
