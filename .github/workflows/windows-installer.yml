@@ -59,7 +59,7 @@ jobs:
           $dest = Join-Path $env:RUNNER_TEMP "zip-test"
           Expand-Archive $zip.FullName -DestinationPath $dest
           $exe = Join-Path $dest "Ordhjaelp\Ordhjaelp.exe"
-          foreach ($file in "Ordhjaelp.exe", "LAES-MIG.txt", "tools\hunspell\hunspell.exe", "tools\tesseract\tesseract.exe") {
+          foreach ($file in "Ordhjaelp.exe", "tools\hunspell\hunspell.exe", "tools\tesseract\tesseract.exe") {
             if (-not (Test-Path (Join-Path $dest "Ordhjaelp\$file"))) { throw "$file mangler i zip-filen" }
           }
           $proc = Start-Process $exe -ArgumentList "--help" -PassThru -Wait

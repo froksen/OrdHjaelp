@@ -33,8 +33,6 @@ Recommends:     xdotool
 # Hjælp til opsætning af ordforslag på KDE: læs valgt virtuelt tastatur, åbn indstillingssiden
 Recommends:     kf6-kconfig
 Recommends:     kf6-kcmutils
-# Ikoner ved uret på GNOME (kun hvis GNOME er installeret, så KDE ikke får GNOME med)
-Recommends:     (gnome-shell-extension-appindicator if gnome-shell)
 
 %description
 Ordhjælp er et gratis læse- og skriveværktøj (LST) til danske elever.

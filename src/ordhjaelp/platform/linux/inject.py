@@ -8,7 +8,7 @@ Hvorfor ikke "taste" tegn for tegn? KDE's portal kan lade Shift hænge fast ved
 store bogstaver (alt bliver skrevet med VERSALER), og tegn som ?, ! og € kræver
 viden om tastaturlayoutet. Indsæt virker ens for alle tegn og er hurtigere.
 
-Første gang spørger KDE/GNOME, om Ordhjælp må styre tastaturet; tilladelsen
+Første gang spørger KDE, om Ordhjælp må styre tastaturet; tilladelsen
 huskes derefter (restore_token).
 Spec: https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.RemoteDesktop.html
 """

@@ -39,7 +39,7 @@ til Windows og macOS.
 Knapperne ligger i en lille knaplinje nederst til højre på skærmen, lige over
 opgavelinjen. Træk i prikkerne (⠿) for at flytte den, og klik på **‹** for at folde den
 ind til en lille fane. Ordhjælp husker, hvor linjen lå. På Wayland huskes pladsen ikke,
-og linjen starter altid nederst til højre (på GNOME vælger skrivebordet selv pladsen). Under
+og linjen starter altid nederst til højre. Under
 **⋯** ligger indstillinger, genveje og Luk. Når knaplinjen bruges, viser Ordhjælp intet
 ved uret. Foretrækker man et ikon for hver funktion
 ved uret, vælges det i indstillingerne under **Knapper**.
@@ -103,22 +103,12 @@ Klik på **⋯** i knaplinjen (eller højreklik på det blå ikon ved uret, hvis
 
 Indstillingerne gemmes i `~/.config/ordhjaelp/config.toml`.
 
-## Installation (Fedora KDE og GNOME)
+Ordhjælp findes til **Fedora Linux med KDE Plasma** og til **Windows**.
 
-### Med RPM
+## Installation på Fedora KDE
 
 Hent `ordhjaelp-<version>-1.fc<NN>.x86_64.rpm` under
-[Releases](https://github.com/froksen/OrdHj-lp/releases). GitHub Actions bygger den i en
-Fedora-container og afprøver, at den kan installeres med dnf.
-
-Eller byg RPM'en selv (kræver `rpm-build`):
-
-```bash
-sudo dnf install rpm-build
-packaging/linux/build-rpm.sh          # → build/rpm/ordhjaelp-<version>.x86_64.rpm
-```
-
-Installér den på maskinen, der skal bruge Ordhjælp:
+[Releases](https://github.com/froksen/OrdHj-lp/releases), og installér den:
 
 ```bash
 sudo dnf install ./ordhjaelp-*.x86_64.rpm
@@ -127,17 +117,6 @@ sudo dnf install ./ordhjaelp-*.x86_64.rpm
 RPM'en medbringer sin egen Python 3.13 og alle Python-pakker i `/opt/ordhjaelp`, og den
 trækker systemværktøjerne (Tesseract, Hunspell, IBus, wl-clipboard m.fl.) ind via dnf.
 Start **Ordhjælp** fra programmenuen.
-
-### Fra kildekoden
-
-```bash
-sudo dnf install wl-clipboard portaudio tesseract tesseract-langpack-dan hunspell-da ibus at-spi2-core xdotool
-pip install --user uv
-git clone https://github.com/froksen/OrdHj-lp.git ordhjaelp && cd ordhjaelp
-uv sync
-uv run ordhjaelp installer --autostart   # menupunkt + start ved login
-uv run ordhjaelp start
-```
 
 ### Første start
 
@@ -155,69 +134,36 @@ Derefter:
   *Systemindstillinger → Tastatur → Virtuelt tastatur → **IBus Wayland***.
   Ordhjælp opdager det af sig selv.
 
-### GNOME: ikonerne ved uret kræver en udvidelse
+## Installation på Windows (prøveudgave)
 
-GNOME viser ikke ikoner ved uret af sig selv. Ordhjælp forventer, at udvidelsen
-**AppIndicator and KStatusNotifierItem Support** er installeret og slået til.
-RPM'en trækker den ind på maskiner med GNOME. Fra kildekoden:
+Der er to måder. Ingen af dem kræver **administrator**, og begge installerer kun for den
+bruger, der er logget ind (i `%LOCALAPPDATA%\Programs\Ordhjaelp`).
 
-```bash
-sudo dnf install gnome-shell-extension-appindicator
-```
+**1. Installationsprogrammet:** hent **Ordhjaelp-<version>-Setup.exe** under
+[Releases](https://github.com/froksen/OrdHj-lp/releases), og dobbeltklik på den. Der kommer en
+genvej i startmenuen, og Ordhjælp kan fjernes under *Indstillinger → Apps*.
 
-Log ud og ind igen. Mangler udvidelsen, eller er den slået fra, viser Ordhjælp en besked
-ved start. Er den installeret, kan den slås til med én knap i beskeden. Uden udvidelsen
-kører Ordhjælp stadig, men kun med tastaturgenvejene.
-
-Ikke alt virker endnu på GNOME: **Læs ved markering** og **Læs under musen** kræver
-foreløbig KDE Plasma.
-
-## Installation (Windows, prøveudgave)
-
-**Med PowerShell (anbefalet):** åbn PowerShell, og kopiér denne linje ind:
+**2. PowerShell:** åbn PowerShell, og kopiér denne linje ind:
 
 ```powershell
 irm https://github.com/froksen/OrdHj-lp/releases/latest/download/install.ps1 | iex
 ```
 
-Scriptet henter den nyeste zip-fil, pakker den ud i `%LOCALAPPDATA%\Programs\Ordhjaelp`, lægger en
-genvej i startmenuen, slår autostart til og starter Ordhjælp. Ordhjælp kan bagefter fjernes
-under *Indstillinger → Apps* som andre programmer. Scriptet kan også hentes og læses igennem
-først: [`packaging/windows/install.ps1`](packaging/windows/install.ps1). Valg (fx uden autostart):
+Scriptet henter Ordhjælp, lægger en genvej i startmenuen, slår autostart til og starter
+Ordhjælp. Ordhjælp kan bagefter fjernes under *Indstillinger → Apps* som andre programmer.
+Scriptet kan også hentes og læses igennem først:
+[`packaging/windows/install.ps1`](packaging/windows/install.ps1). Valg (fx uden autostart):
 
 ```powershell
 & ([scriptblock]::Create((irm https://github.com/froksen/OrdHj-lp/releases/latest/download/install.ps1))) -IngenAutostart -Skrivebord
 ```
-
-**Eller hent selv** under [Releases](https://github.com/froksen/OrdHj-lp/releases):
-
-- **Ordhjaelp-<version>-Windows.zip**: pak den ud (højreklik → *Udpak alle …*), og dobbeltklik på
-  `Ordhjaelp.exe` i mappen. Der skal ikke installeres noget. Den virker også på pc'er med
-  Smart App Control, hvor installeren bliver blokeret, fordi den ikke er signeret. Det samme
-  gør PowerShell-scriptet.
-- **Ordhjaelp-<version>-Setup.exe**: en almindelig installer med genvej i startmenuen og
-  afinstallation under Windows' indstillinger.
-
-Ingen af udgaverne kræver **administrator**. Installeren installerer kun for den bruger, der er
-logget ind (i `%LOCALAPPDATA%\Programs\Ordhjaelp`).
 
 - Hunspell (dansk ordbog) og Tesseract (læs fra skærmen) følger med. Der skal ikke
   installeres andet.
 - Første gang hentes stemmen og talegenkendelsen (ca. 300 MB).
 - Ordhjælp er ikke signeret endnu. Windows kan derfor vise "Windows beskyttede din pc".
   Klik på **Flere oplysninger** og derefter **Kør alligevel**. Er Smart App Control slået til,
-  blokerer Windows installeren. Brug så PowerShell-scriptet eller zip-filen.
-
-Fra kildekoden (til udvikling):
-
-```powershell
-winget install astral-sh.uv
-winget install UB-Mannheim.TesseractOCR   # til "læs fra skærmen" (vælg den danske sprogpakke)
-git clone https://github.com/froksen/OrdHj-lp.git ordhjaelp; cd ordhjaelp
-uv sync
-uv run ordhjaelp installer --autostart    # start ved login
-uv run ordhjaelp start
-```
+  blokerer Windows installationsprogrammet. Brug så PowerShell-kommandoen.
 
 | Virker på Windows | Sådan |
 |---|---|
@@ -241,7 +187,7 @@ Bemærk: når Ctrl+C bruges, kan udklipsholderens historik (Win+V) vise den teks
 
 | Kommando | Hvad den gør |
 |---|---|
-| `ordhjaelp start` | Starter Ordhjælp med ikoner ved uret (`--uden-ikon` for uden) |
+| `ordhjaelp start` | Starter Ordhjælp med knaplinjen (`--uden-ikon` for kun genveje) |
 | `ordhjaelp afslut` | Lukker Ordhjælp |
 | `ordhjaelp laes` / `stop` | Læser markeret tekst op / stopper |
 | `ordhjaelp sig "tekst"` | Læser en tekst op |
@@ -287,10 +233,10 @@ src/ordhjaelp/
 ├── stt/            talegenkendelse (faster-whisper)
 ├── ocr/            tekstgenkendelse (Tesseract), søgbare PDF'er
 ├── audio/          afspilning, optagelse, lydsignaler
-├── ui/             ikoner ved uret, markering af skærmudsnit, indstillinger (Qt)
+├── ui/             knaplinje, ikoner ved uret, markering af skærmudsnit, indstillinger (Qt)
 ├── platform/       ALT styresystem-specifikt
 │   ├── base.py     interfaces
-│   ├── linux/      Wayland/X11: xdg-desktop-portal, IBus, wl-clipboard
+│   ├── linux/      Fedora KDE (Wayland): xdg-desktop-portal, KWin, IBus, wl-clipboard
 │   ├── windows/    Win32 via ctypes: genveje, UI Automation, SendInput, tastaturovervågning
 │   └── macos/      (senere)
 ├── ipc.py          lokal forbindelse mellem kommandoer, IBus og tjenesten
@@ -311,6 +257,30 @@ testes på alle systemer.
 
 ## Udvikling
 
+Kør fra kildekoden på Fedora KDE:
+
+```bash
+sudo dnf install wl-clipboard portaudio tesseract tesseract-langpack-dan hunspell-da ibus at-spi2-core xdotool
+pip install --user uv
+git clone https://github.com/froksen/OrdHj-lp.git ordhjaelp && cd ordhjaelp
+uv sync
+uv run ordhjaelp installer --autostart   # menupunkt + start ved login
+uv run ordhjaelp start
+```
+
+Eller på Windows:
+
+```powershell
+winget install astral-sh.uv
+winget install UB-Mannheim.TesseractOCR   # til "læs fra skærmen" (vælg den danske sprogpakke)
+git clone https://github.com/froksen/OrdHj-lp.git ordhjaelp; cd ordhjaelp
+uv sync
+uv run ordhjaelp installer --autostart    # start ved login
+uv run ordhjaelp start
+```
+
+Tests og kontrol:
+
 ```bash
 scripts/tjek.sh                   # alt det, GitHub Actions kører på Linux (før push)
 uv run pytest                     # tests
@@ -319,11 +289,15 @@ ORDHJAELP_IBUS_TEST=1 uv run pytest tests/integration   # IBus-test med privat i
 ORDHJAELP_ATSPI_TEST=1 uv run pytest tests/integration/test_atspi.py   # læs under musen (Xvfb + AT-SPI)
 ```
 
-**Windows-installeren** bygges af GitHub Actions ved en tag (`v0.3.0`), og den lægges
-på udgivelsen. Lokalt (kræver Inno Setup 6, og MSYS2 for at få Hunspell og Tesseract med):
+**Windows-installationsprogrammet** og zip-filen, som PowerShell-kommandoen henter, bygges af
+GitHub Actions ved en tag (`v0.3.0`) og lægges på udgivelsen. **RPM'en** bygges også af
+GitHub Actions i en Fedora-container, der afprøver, at den kan installeres med dnf. Lokalt:
+`packaging/linux/build-rpm.sh` (kræver `rpm-build`).
+
+Windows lokalt (kræver Inno Setup 6, og MSYS2 for at få Hunspell og Tesseract med):
 
 ```powershell
-powershell -File packaging\windows\build-installer.ps1                            # Setup.exe og Windows.zip i dist\
+powershell -File packaging\windows\build-installer.ps1                            # Setup.exe og zip-filen i dist\
 powershell -File packaging\windows\build-installer.ps1 -SkipInstaller -NoTools   # kun dist\Ordhjaelp\
 ```
 

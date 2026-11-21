@@ -8,7 +8,7 @@ Ren Qt, så den virker på Linux og Windows. Eleven flytter linjen ved at trækk
 håndtaget (⠿), og Ordhjælp husker, hvor den lå, og om den var foldet ind. På Wayland
 må programmer hverken se eller bestemme, hvor deres vinduer ligger. Der huskes kun,
 om linjen var foldet ind. Linjen starter nederst til højre over opgavelinjen: på
-Wayland beder vi skrivebordet om at flytte den dertil (kun KDE Plasma kan det).
+Wayland beder vi KDE (KWin) om at flytte den dertil.
 """
 
 from __future__ import annotations

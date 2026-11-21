@@ -1,6 +1,6 @@
 """Globale genveje på Linux via xdg-desktop-portal (GlobalShortcuts).
 
-Virker på Wayland (KDE Plasma 6, GNOME 48+ m.fl.). Brugeren godkender og
+Virker på Wayland (KDE Plasma 6). Brugeren godkender og
 kan ændre genvejene i systemindstillingerne.
 Spec: https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.GlobalShortcuts.html
 """
@@ -37,7 +37,7 @@ class PortalHotkeys:
         portal = Portal.shared()
         self._portal = portal
         portal.on_signal(GS_IFACE, "Activated", lambda msg: on_activated(msg.body[1]))
-        # Første gang venter dette på, at brugeren godkender i KDE/GNOME-dialogen.
+        # Første gang venter dette på, at brugeren godkender i KDE-dialogen.
         portal.run(self._bind(portal, bindings), timeout=310)
 
     def stop(self) -> None:

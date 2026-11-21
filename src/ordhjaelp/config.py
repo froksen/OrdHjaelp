@@ -170,7 +170,7 @@ soegbar = {b(self.pdf_ocr_enabled)}
 {icons}
 
 [genveje]
-# Ønskede tastaturgenveje. På KDE/GNOME kan de ændres i systemindstillingerne.
+# Ønskede tastaturgenveje. På KDE kan de ændres i systemindstillingerne.
 {hotkeys}
 """
 

@@ -1,4 +1,4 @@
-"""Knaplinjen behøver ikke et område til ikoner ved uret (fx GNOME uden udvidelse)."""
+"""Knaplinjen behøver ikke et område til ikoner ved uret."""
 
 import os
 
@@ -27,22 +27,21 @@ class FakeTrayApp:
         return 0
 
 
-def _run(monkeypatch, view: str) -> tuple[bool, list]:
+def _run(monkeypatch, view: str) -> tuple[bool, Config]:
     FakeTrayApp.started = 0
-    explained = []
     monkeypatch.setattr(tray_mod, "TrayApp", FakeTrayApp)
-    monkeypatch.setattr(daemon, "_explain_missing_tray", lambda *a: explained.append(a) or False)
     cfg = Config()
     cfg.view = view
     ok = daemon._run_tray(None, None, None, {}, SimpleNamespace(config=cfg))
-    return ok, explained
+    return ok, cfg
 
 
 def test_toolbar_starts_without_tray_area(monkeypatch) -> None:
-    ok, explained = _run(monkeypatch, VIEW_TOOLBAR)
-    assert ok and FakeTrayApp.started == 1 and explained == []
+    ok, cfg = _run(monkeypatch, VIEW_TOOLBAR)
+    assert ok and FakeTrayApp.started == 1 and cfg.view == VIEW_TOOLBAR
 
 
-def test_tray_view_explains_missing_tray_area(monkeypatch) -> None:
-    ok, explained = _run(monkeypatch, VIEW_TRAY)
-    assert not ok and FakeTrayApp.started == 0 and len(explained) == 1
+def test_tray_view_falls_back_to_toolbar_without_tray_area(monkeypatch) -> None:
+    """Kan skrivebordet ikke vise ikoner ved uret, bruges knaplinjen i stedet."""
+    ok, cfg = _run(monkeypatch, VIEW_TRAY)
+    assert ok and FakeTrayApp.started == 1 and cfg.view == VIEW_TOOLBAR
