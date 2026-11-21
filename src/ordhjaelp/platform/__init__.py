@@ -7,6 +7,7 @@ import sys
 from ordhjaelp.platform.base import (
     Autostart,
     HotkeyProvider,
+    InputMethod,
     PlatformNotSupported,
     ScreenCapture,
     SelectionProvider,
@@ -54,7 +55,16 @@ def get_autostart() -> Autostart:
     raise PlatformNotSupported(f"Autostart understøttes endnu ikke på {sys.platform}")
 
 
+def get_input_method() -> InputMethod:
+    if sys.platform.startswith("linux"):
+        from ordhjaelp.platform.linux.ibus import IBusInputMethod
+
+        return IBusInputMethod()
+    raise PlatformNotSupported(f"Ordforslag understøttes endnu ikke på {sys.platform}")
+
+
 __all__ = [
+    "get_input_method",
     "get_autostart",
     "get_hotkey_provider",
     "get_screen_capture",

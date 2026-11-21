@@ -83,3 +83,4 @@ def test_needs_restart() -> None:
     assert not needs_restart(a, Config(speed=1.2))
     assert needs_restart(a, Config(dictation_enabled=False))
     assert needs_restart(a, Config(dictation_model="turbo"))
+    assert needs_restart(a, Config(prediction_enabled=False))

@@ -24,6 +24,14 @@ def data_dir() -> Path:
     return Path(user_data_dir(APP_NAME))
 
 
+def lexicon_path() -> Path:
+    return data_dir() / "ordliste.json"
+
+
+def learned_words_path() -> Path:
+    return data_dir() / "egne_ord.json"
+
+
 def voices_dir() -> Path:
     return data_dir() / "stemmer"
 
@@ -39,6 +47,7 @@ class Config:
     use_clipboard_fallback: bool = False
     dictation_enabled: bool = True
     dictation_model: str = "dansk-hurtig"
+    prediction_enabled: bool = True
     hotkeys: dict[str, str] = field(
         default_factory=lambda: {
             "laes": "CTRL+ALT+L",
@@ -65,6 +74,8 @@ class Config:
         dictation = raw.get("diktering", {})
         cfg.dictation_enabled = bool(dictation.get("aktiv", cfg.dictation_enabled))
         cfg.dictation_model = str(dictation.get("model", cfg.dictation_model))
+        prediction = raw.get("ordforslag", {})
+        cfg.prediction_enabled = bool(prediction.get("aktiv", cfg.prediction_enabled))
         cfg.hotkeys.update({str(k): str(v) for k, v in raw.get("genveje", {}).items()})
         cfg.show_icons.update({str(k): bool(v) for k, v in raw.get("ikoner", {}).items()})
         return cfg
@@ -99,6 +110,10 @@ aktiv = {b(self.dictation_enabled)}
 #   "dansk-hurtig" – dansk, hurtig (standard)      "dansk-turbo" – dansk, mere præcis, langsommere
 #   "dansk-stor"   – dansk (CoRal røst), langsom   "hurtig"/"turbo" – generelle modeller
 model = {s(self.dictation_model)}
+
+[ordforslag]
+# Forslag mens der skrives (kræver IBus – se README)
+aktiv = {b(self.prediction_enabled)}
 
 [ikoner]
 # Vis ikoner ved uret (dikter = mikrofon, skaerm = læs fra skærmen)

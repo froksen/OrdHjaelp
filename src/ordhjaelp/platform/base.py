@@ -48,6 +48,16 @@ class ScreenCapture(Protocol):
         ...
 
 
+class InputMethod(Protocol):
+    """Indtastningsmetode, der viser ordforslag i alle programmer."""
+
+    def start(self) -> bool:
+        """Start den. Returnerer False, hvis systemet ikke er sat op til det."""
+        ...
+
+    def stop(self) -> None: ...
+
+
 class Autostart(Protocol):
     def is_enabled(self) -> bool: ...
     def set_enabled(self, enabled: bool) -> None: ...

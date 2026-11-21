@@ -11,6 +11,12 @@ Mens der læses, er ikonet rødt – klik igen (eller **Ctrl+Alt+S**) for at sto
 og tal. Klik igen, når du er færdig – teksten skrives ind, hvor markøren står.
 Første gang spørger KDE, om Ordhjælp må bruge tastaturet.
 
+**Ordforslag:** Mens der skrives, vises forslag ved markøren – også ved lydret stavning
+("sgole" → *skole*). **↓/↑** vælger (ordet læses op), **Tab** eller **mellemrum** tager det
+valgte, **F1–F5** eller klik vælger direkte. Uden valg bliver det skrevne stående.
+Kræver IBus: *Systemindstillinger → Tastatur → Virtuelt tastatur → IBus Wayland*.
+Ord, eleven bruger, huskes lokalt (`~/.local/share/ordhjaelp/egne_ord.json`).
+
 **Læs fra skærmen:** Klik på det **lilla ikon** (eller **Ctrl+Alt+B**), og træk en firkant om
 tekst i et billede, en PDF eller et spil. Teksten læses op. Esc fortryder.
 
@@ -53,6 +59,7 @@ Genvejene kan også ændres i *Systemindstillinger → Tastaturgenveje*.
 src/ordhjaelp/
 ├── services/       logik, uafhængig af styresystem (fx read_aloud.py)
 ├── tts/            Piper (oplæsning)
+├── ordmotor/       ordforslag: ordliste (wordfreq + Hunspell), lydregler, rangering
 ├── ocr/            Tesseract (tekst fra skærmen)
 ├── stt/            Whisper (diktering) – kun færdige modeller fra Hugging Face
 ├── audio/          afspilning
@@ -75,6 +82,7 @@ Regel: kode uden for `platform/` må ikke kalde styresystemet direkte.
 uv run pytest          # tests
 uv run ruff check .    # kodekvalitet
 uv run ruff format .   # formatering
+ORDHJAELP_IBUS_TEST=1 uv run pytest tests/integration   # IBus-test (privat ibus-daemon)
 ```
 
 ## Licens

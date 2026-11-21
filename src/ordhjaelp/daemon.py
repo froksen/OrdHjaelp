@@ -11,11 +11,12 @@ from collections.abc import Callable
 
 from ordhjaelp import ipc
 from ordhjaelp.audio.player import Player
-from ordhjaelp.config import Config, voices_dir, whisper_dir
+from ordhjaelp.config import Config, learned_words_path, lexicon_path, voices_dir, whisper_dir
 from ordhjaelp.platform import (
     PlatformNotSupported,
     get_autostart,
     get_hotkey_provider,
+    get_input_method,
     get_screen_capture,
     get_selection_provider,
     get_text_injector,
@@ -24,6 +25,7 @@ from ordhjaelp.platform.base import HotkeyProvider
 from ordhjaelp.services.dictation import DictationService
 from ordhjaelp.services.read_aloud import ReadAloudService
 from ordhjaelp.services.screen_read import ScreenReadService
+from ordhjaelp.services.word_prediction import WordPredictionService
 from ordhjaelp.tts.piper_engine import PiperEngine, ensure_voice
 
 log = logging.getLogger(__name__)
@@ -41,6 +43,8 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
     )
     dictation = _make_dictation(cfg, service) if cfg.dictation_enabled else None
     screen = _make_screen_reader(service)
+    prediction = WordPredictionService(lexicon_path(), learned_words_path())
+    prediction.load_in_background()
     # Handlinger som kun brugerfladen kan udføre (fx vise markeringsoverlay)
     ui_actions: dict[str, Callable[[], None]] = {}
     restart_requested = threading.Event()
@@ -55,6 +59,11 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
             return {"ok": service.say(str(req.get("tekst", "")))}
         if cmd == "stop":
             service.stop()
+            return {"ok": True}
+        if cmd == "forslag":
+            return {"ok": True, "forslag": prediction.suggest(str(req.get("ord", "")))}
+        if cmd == "laer":
+            prediction.learn(str(req.get("ord", "")))
             return {"ok": True}
         if cmd == "skaerm":
             action = ui_actions.get("skaerm")
@@ -104,6 +113,15 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
     if hotkeys:
         threading.Thread(target=start_hotkeys, daemon=True, name="hotkey-setup").start()
 
+    input_method = None
+    if cfg.prediction_enabled:
+        try:
+            input_method = get_input_method()
+            input_method.start()  # starter også senere af sig selv, hvis IBus mangler nu
+        except Exception as exc:  # noqa: BLE001 - ordforslag er valgfrit
+            log.warning("Ordforslag er ikke tilgængeligt: %s", exc)
+            input_method = None
+
     def restart() -> None:
         restart_requested.set()
         os.kill(os.getpid(), signal.SIGTERM)  # luk pænt – derefter startes forfra
@@ -114,6 +132,9 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
             _wait_for_signal()
     finally:
         log.info("Lukker ned")
+        prediction.save()
+        if input_method:
+            input_method.stop()
         service.stop()
         for hk in hk_holder:
             hk.stop()

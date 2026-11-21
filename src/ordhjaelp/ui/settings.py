@@ -46,9 +46,10 @@ class SettingsHooks:
 
 def needs_restart(old: Config, new: Config) -> bool:
     """Ændringer, der kun kan træde i kraft ved en genstart."""
-    return (old.dictation_enabled, old.dictation_model) != (
+    return (old.dictation_enabled, old.dictation_model, old.prediction_enabled) != (
         new.dictation_enabled,
         new.dictation_model,
+        new.prediction_enabled,
     )
 
 
@@ -110,6 +111,17 @@ class SettingsDialog(QDialog):
         form.addRow("", note)
         layout.addWidget(box)
 
+        # -- Ordforslag ---------------------------------------------------
+        box = QGroupBox("Ordforslag")
+        col = QVBoxLayout(box)
+        self.prediction = QCheckBox("Vis ordforslag, mens der skrives")
+        self.prediction.setChecked(cfg.prediction_enabled)
+        col.addWidget(self.prediction)
+        note = QLabel("Kræver at IBus er valgt som indtastningsmetode (se vejledningen).")
+        note.setStyleSheet("color: gray")
+        col.addWidget(note)
+        layout.addWidget(box)
+
         # -- Ikoner og start --------------------------------------------
         box = QGroupBox("Ikoner ved uret")
         col = QVBoxLayout(box)
@@ -157,6 +169,7 @@ class SettingsDialog(QDialog):
         cfg.use_clipboard_fallback = self.clipboard.isChecked()
         cfg.dictation_enabled = self.dictation.isChecked()
         cfg.dictation_model = str(self.model.currentData())
+        cfg.prediction_enabled = self.prediction.isChecked()
         cfg.show_icons["dikter"] = self.icon_mic.isChecked()
         cfg.show_icons["skaerm"] = self.icon_screen.isChecked()
         return cfg
