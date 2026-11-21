@@ -1,5 +1,6 @@
 import ctypes
 import os
+from pathlib import Path
 
 import pytest
 
@@ -212,7 +213,8 @@ def test_job_explains_already_searchable(app, tmp_path):
 
     src = make_pdf(tmp_path / "tekst.pdf", [("tekst", REAL_TEXT)])
     job = _run_job(pdf_ocr.PdfOcrJob(src))
-    assert "allerede tekst" in job.result
+    assert isinstance(job.result, AlreadySearchable)
+    assert "allerede tekst" in job._box.text()
     assert not job.dst.exists()
     job._box.close()
 
@@ -235,3 +237,36 @@ def test_job_stop_button_cancels(app, tmp_path, monkeypatch):
     _run_job(job)
     assert isinstance(job.result, Cancelled)
     assert not job.dst.exists()
+
+
+@pytest.mark.parametrize(
+    ("button", "opened"),
+    [("Åbn PDF'en", "Opgave (søgbar).pdf"), ("Åbn mappen", "."), ("Nej tak", None)],
+)
+def test_after_ocr_asks_what_to_open(app, tmp_path, monkeypatch, button, opened):
+    """Bagefter spørges der: åbn PDF'en, åbn mappen, eller ingen af dem."""
+    from ordhjaelp.ui import pdf_ocr
+
+    src = make_pdf(tmp_path / "Opgave.pdf", [("scannet", SCANNED_TEXT)])
+    real = pdf_ocr.make_searchable
+    monkeypatch.setattr(pdf_ocr, "make_searchable", lambda s, d, p: real(s, d, p, fake_ocr([])))
+    urls = []
+    monkeypatch.setattr(pdf_ocr.QDesktopServices, "openUrl", lambda url: urls.append(url))
+    job = _run_job(pdf_ocr.PdfOcrJob(src))
+    [choice] = [b for b in job._box.buttons() if b.text() == button]
+    choice.click()
+    expected = [] if opened is None else [(tmp_path / opened).resolve()]
+    assert [Path(u.toLocalFile()).resolve() for u in urls] == expected
+
+
+def test_already_searchable_also_asks_and_opens_the_original(app, tmp_path, monkeypatch):
+    from ordhjaelp.ui import pdf_ocr
+
+    src = make_pdf(tmp_path / "tekst.pdf", [("tekst", REAL_TEXT)])
+    urls = []
+    monkeypatch.setattr(pdf_ocr.QDesktopServices, "openUrl", lambda url: urls.append(url))
+    job = _run_job(pdf_ocr.PdfOcrJob(src))
+    assert "Vil du åbne den?" in job._box.text()
+    [choice] = [b for b in job._box.buttons() if b.text() == "Åbn PDF'en"]
+    choice.click()
+    assert [Path(u.toLocalFile()) for u in urls] == [src]

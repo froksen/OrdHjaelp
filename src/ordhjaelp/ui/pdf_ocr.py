@@ -26,6 +26,11 @@ MSG_DONE = (
     "Færdig! Nu kan teksten markeres og læses op.\n\n"
     "Den nye PDF hedder:\n{name}\n\nDen ligger samme sted som den gamle."
 )
+MSG_ALREADY = "\n\nPDF'en hedder:\n{name}"
+MSG_WHAT_NOW = "\n\nVil du åbne den?"
+# Hvad der skal ske bagefter
+OPEN_PDF = "pdf"
+OPEN_FOLDER = "mappe"
 MSG_NO_OCR = "Tekstgenkendelse (Tesseract) er ikke installeret på computeren."
 MSG_ERROR = "Det gik galt. Prøv igen, eller prøv en anden PDF."
 
@@ -69,7 +74,9 @@ class PdfOcrJob:
             outcome: object = None
         except Cancelled as exc:
             outcome = exc
-        except (AlreadySearchable, PdfOcrError) as exc:
+        except AlreadySearchable as exc:
+            outcome = exc  # den gamle PDF kan bruges, som den er
+        except PdfOcrError as exc:
             outcome = str(exc)
         except OcrUnavailable as exc:
             log.warning("%s", exc)
@@ -89,14 +96,11 @@ class PdfOcrJob:
         self.dialog.close()
         parent = self.dialog.parentWidget()
         if outcome is None:
-            box = QMessageBox(QMessageBox.Icon.Information, TITLE, "", parent=parent)
-            box.setText(MSG_DONE.format(name=self.dst.name))
-            open_button = box.addButton("Åbn PDF", QMessageBox.ButtonRole.AcceptRole)
-            box.addButton("Luk", QMessageBox.ButtonRole.RejectRole)
-            box.finished.connect(
-                lambda _: self._finish(open_pdf=box.clickedButton() is open_button)
+            box = self._ask_open(self.dst, MSG_DONE.format(name=self.dst.name), parent)
+        elif isinstance(outcome, AlreadySearchable):
+            box = self._ask_open(
+                self.src, str(outcome) + MSG_ALREADY.format(name=self.src.name), parent
             )
-            box.show()
         elif isinstance(outcome, Cancelled):
             self._finish()
         else:
@@ -105,9 +109,23 @@ class PdfOcrJob:
             box.show()
         self._box = box if not isinstance(outcome, Cancelled) else None
 
-    def _finish(self, open_pdf: bool = False) -> None:
-        if open_pdf:
-            QDesktopServices.openUrl(QUrl.fromLocalFile(str(self.dst)))
+    def _ask_open(self, pdf: Path, text: str, parent: QWidget | None) -> QMessageBox:
+        """Spørg, om PDF'en skal åbnes i PDF-læseren, om mappen skal åbnes, eller ingen af dem."""
+        box = QMessageBox(QMessageBox.Icon.Information, TITLE, text + MSG_WHAT_NOW, parent=parent)
+        choices = {
+            box.addButton("Åbn PDF'en", QMessageBox.ButtonRole.AcceptRole): OPEN_PDF,
+            box.addButton("Åbn mappen", QMessageBox.ButtonRole.ActionRole): OPEN_FOLDER,
+        }
+        box.addButton("Nej tak", QMessageBox.ButtonRole.RejectRole)
+        box.finished.connect(lambda _: self._finish(pdf, choices.get(box.clickedButton())))
+        box.show()
+        return box
+
+    def _finish(self, pdf: Path | None = None, choice: str | None = None) -> None:
+        if pdf is not None and choice == OPEN_PDF:
+            QDesktopServices.openUrl(QUrl.fromLocalFile(str(pdf)))
+        elif pdf is not None and choice == OPEN_FOLDER:
+            QDesktopServices.openUrl(QUrl.fromLocalFile(str(pdf.parent)))
         self.on_done()
 
 
