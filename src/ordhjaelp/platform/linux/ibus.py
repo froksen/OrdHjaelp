@@ -135,6 +135,12 @@ def _current_engine() -> str:
 class IBusSetup:
     """Tjekker, om IBus er sat op, så ordforslag og læs mens du skriver virker."""
 
+    intro = (
+        "Ordforslag og læs mens du skriver bruger <b>IBus</b>, som er Linux' "
+        "system til indtastning. Det skal slås til én gang."
+    )
+    settings_button = "Åbn tastaturindstillingerne"
+
     def checks(self) -> list[SetupCheck]:
         installed = _ibus_installed()
         result = [

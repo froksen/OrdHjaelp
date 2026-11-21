@@ -110,6 +110,9 @@ class ModelStore:
         from huggingface_hub import snapshot_download
 
         self.speech_dir.mkdir(parents=True, exist_ok=True)
+        # Windows uden udviklertilstand kan ikke lave symlinks. huggingface_hub kopierer
+        # så filerne i stedet (det virker fint), men advarer om det ved hver hentning.
+        os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
         snapshot_download(
             _MODELS.get(model.source, model.source),
             cache_dir=str(self.speech_dir),

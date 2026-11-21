@@ -53,10 +53,7 @@ class TypingSetupDialog(QDialog):
         self.setMinimumWidth(460)
         layout = QVBoxLayout(self)
 
-        intro = QLabel(
-            "Ordforslag og læs mens du skriver bruger <b>IBus</b>, som er Linux' "
-            "system til indtastning. Det skal slås til én gang."
-        )
+        intro = QLabel(setup.intro)
         intro.setWordWrap(True)
         layout.addWidget(intro)
 
@@ -67,15 +64,16 @@ class TypingSetupDialog(QDialog):
         guide.setWordWrap(True)
         guide.setTextFormat(Qt.TextFormat.RichText)
         col.addWidget(guide)
-        open_button = QPushButton("Åbn tastaturindstillingerne")
-        open_button.clicked.connect(self._open_settings)
         self._open_failed = QLabel(
             "Kunne ikke åbne indstillingerne. Find dem i Systemindstillinger."
         )
         self._open_failed.setStyleSheet("color: gray")
         self._open_failed.setWordWrap(True)
         self._open_failed.hide()
-        col.addWidget(open_button, 0, Qt.AlignmentFlag.AlignLeft)
+        if setup.settings_button:  # Windows: intet at sætte op i systemet
+            open_button = QPushButton(setup.settings_button)
+            open_button.clicked.connect(self._open_settings)
+            col.addWidget(open_button, 0, Qt.AlignmentFlag.AlignLeft)
         col.addWidget(self._open_failed)
         layout.addWidget(box)
 

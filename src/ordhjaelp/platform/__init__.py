@@ -90,6 +90,10 @@ def get_input_method() -> InputMethod:
         from ordhjaelp.platform.linux.ibus import IBusInputMethod
 
         return IBusInputMethod()
+    if sys.platform == "win32":
+        from ordhjaelp.platform.windows.typing import WindowsInputMethod
+
+        return WindowsInputMethod()
     raise PlatformNotSupported(f"Ordforslag understøttes endnu ikke på {sys.platform}")
 
 
@@ -99,6 +103,10 @@ def get_typing_setup() -> TypingSetup | None:
         from ordhjaelp.platform.linux.ibus import IBusSetup
 
         return IBusSetup()
+    if sys.platform == "win32":
+        from ordhjaelp.platform.windows.typing import WindowsTypingSetup
+
+        return WindowsTypingSetup()
     return None
 
 

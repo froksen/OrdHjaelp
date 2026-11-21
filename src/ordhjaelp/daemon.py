@@ -153,7 +153,7 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
         threading.Thread(target=start_hotkeys, daemon=True, name="hotkey-setup").start()
 
     input_method = None
-    if cfg.typing_help_enabled:  # ordforslag og læs mens du skriver går begge gennem IBus
+    if cfg.typing_help_enabled:  # ordforslag og læs mens du skriver: IBus/tastaturovervågning
         try:
             input_method = get_input_method()
             input_method.start()  # starter også senere af sig selv, hvis IBus mangler nu

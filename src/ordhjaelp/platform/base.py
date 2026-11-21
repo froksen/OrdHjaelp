@@ -99,6 +99,9 @@ class SetupCheck:
 class TypingSetup(Protocol):
     """Opsætningen af styresystemet, som ordforslag og læs mens du skriver kræver."""
 
+    intro: str  # første afsnit i vejledningen
+    settings_button: str | None  # teksten på knappen til systemets indstillinger (None = ingen)
+
     def checks(self) -> list[SetupCheck]:
         """Tjek opsætningen nu. Hurtigt nok til at kalde fra brugerfladen."""
         ...
