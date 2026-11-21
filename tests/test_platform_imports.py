@@ -45,12 +45,15 @@ TESTS = Path(__file__).resolve().parent
 
 TEST_SCRIPT = """
 import importlib.util, sys
+import pytest
 sys.modules["dbus_fast"] = None  # som på Windows
 bad = []
 for path in sys.argv[1:]:
     spec = importlib.util.spec_from_file_location("t", path)
     try:
         spec.loader.exec_module(importlib.util.module_from_spec(spec))
+    except pytest.skip.Exception:
+        pass  # filen springer sig selv over (det gør Linux-tests på Windows)
     except ImportError:
         source = open(path, encoding="utf-8").read()
         # Linux-tests må gerne kræve dbus-fast, hvis de springer sig selv over uden for Linux
@@ -62,14 +65,28 @@ print("ok")
 """
 
 
-def test_test_files_import_on_windows() -> None:
-    files = [str(p) for p in sorted(TESTS.glob("test_*.py"))]
-    files += [str(p) for p in sorted((TESTS / "ordmotor").glob("test_*.py"))]
-    result = subprocess.run(
+def _check(files: list[str]) -> subprocess.CompletedProcess:
+    return subprocess.run(
         [sys.executable, "-c", TEST_SCRIPT, *files],
         capture_output=True,
         text=True,
         timeout=120,
         cwd=TESTS,
     )
+
+
+def test_test_files_import_on_windows() -> None:
+    files = [str(p) for p in sorted(TESTS.glob("test_*.py"))]
+    files += [str(p) for p in sorted((TESTS / "ordmotor").glob("test_*.py"))]
+    result = _check(files)
     assert result.returncode == 0, result.stderr
+
+
+def test_guard_accepts_skipping_and_catches_missing_skip(tmp_path) -> None:
+    """Vagten selv: det, der sker på Windows, afprøves her på Linux."""
+    skips = tmp_path / "test_skips.py"  # sådan opfører en Linux-test sig på Windows
+    skips.write_text("import pytest\npytest.skip('kun Linux', allow_module_level=True)\n")
+    assert _check([str(skips)]).returncode == 0
+    needs_dbus = tmp_path / "test_needs_dbus.py"  # den oprindelige fejl
+    needs_dbus.write_text("import dbus_fast\n")
+    assert _check([str(needs_dbus)]).returncode != 0
