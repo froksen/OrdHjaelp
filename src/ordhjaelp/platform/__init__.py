@@ -114,7 +114,20 @@ def get_typing_setup() -> TypingSetup | None:
     return None
 
 
+def set_tray_icons_always_visible(visible: bool) -> bool:
+    """Vis ikonerne ved uret i stedet for gemt under ^ (kun Windows 11). True = ændret."""
+    if sys.platform == "win32":
+        from ordhjaelp.platform.windows.tray_icons import set_promoted
+
+        try:
+            return set_promoted(visible) > 0
+        except OSError:
+            return False
+    return False
+
+
 __all__ = [
+    "set_tray_icons_always_visible",
     "get_input_method",
     "get_typing_setup",
     "get_autostart",

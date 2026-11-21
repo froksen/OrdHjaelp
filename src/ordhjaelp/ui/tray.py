@@ -65,7 +65,12 @@ class TrayApp:
         screen: ScreenReadService | None = None,
         ui_actions: dict[str, Callable[[], None]] | None = None,
         settings=None,  # noqa: ANN001 - SettingsHooks (importeres først ved brug)
+        hotkeys: dict[str, str] | None = None,
     ) -> None:
+        """:param hotkeys: de aktive genveje (vises i menuerne), None uden genveje."""
+        from ordhjaelp.ui.shortcuts import shortcut_for, with_shortcut
+
+        self._hotkeys = hotkeys
         self.app = QApplication.instance() or QApplication(sys.argv)
         self.app.setApplicationName("Ordhjælp")
         self.app.setDesktopFileName(APP_ID)
@@ -77,13 +82,15 @@ class TrayApp:
         self.app.setWindowIcon(self._icon_idle)
 
         self.tray = QSystemTrayIcon(self._icon_idle)
-        self.tray.setToolTip(TOOLTIP_IDLE)
+        read_key = shortcut_for(hotkeys, "laes")
+        self._tooltip_idle = TOOLTIP_IDLE + (f" (eller tryk {read_key})" if read_key else "")
+        self.tray.setToolTip(self._tooltip_idle)
         self.tray.activated.connect(self._on_activated)
 
         menu = QMenu()
-        self._act_read = QAction("Læs markeret tekst op", menu)
+        self._act_read = QAction(with_shortcut("Læs markeret tekst op", hotkeys, "laes"), menu)
         self._act_read.triggered.connect(service.read_selection)
-        self._act_stop = QAction("Stop", menu)
+        self._act_stop = QAction(with_shortcut("Stop", hotkeys, "stop"), menu)
         self._act_stop.triggered.connect(service.stop)
         self._act_stop.setEnabled(False)
         act_quit = QAction("Luk Ordhjælp", menu)
@@ -91,10 +98,15 @@ class TrayApp:
         menu.addAction(self._act_read)
         menu.addAction(self._act_stop)
         menu.addSeparator()
+        act_keys = QAction("Genveje …", menu)
+        act_keys.triggered.connect(self.open_shortcuts)
+        menu.addAction(act_keys)
         self._settings = settings
         self._settings_dialog = None
+        self._shortcuts_dialog = None
         if settings is not None:
             settings.set_icon_visible = self.set_icon_visible
+            settings.set_icons_always_visible = self.set_icons_always_visible
             act_settings = QAction("Indstillinger …", menu)
             act_settings.triggered.connect(self.open_settings)
             menu.addAction(act_settings)
@@ -115,7 +127,9 @@ class TrayApp:
             self.mic.setToolTip(MIC_TOOLTIPS[DictationState.IDLE])
             self.mic.activated.connect(self._on_mic_activated)
             mic_menu = QMenu()
-            act_dictate = QAction("Start/stop diktering", mic_menu)
+            act_dictate = QAction(
+                with_shortcut("Start/stop diktering", hotkeys, "dikter"), mic_menu
+            )
             act_dictate.triggered.connect(dictation.toggle)
             mic_menu.addAction(act_dictate)
             self._mic_menu = mic_menu
@@ -137,7 +151,9 @@ class TrayApp:
             self.screen_icon.setToolTip("Læs fra skærmen – klik og træk en firkant om teksten")
             self.screen_icon.activated.connect(self._on_screen_activated)
             screen_menu = QMenu()
-            act_screen = QAction("Læs tekst fra skærmen", screen_menu)
+            act_screen = QAction(
+                with_shortcut("Læs tekst fra skærmen", hotkeys, "skaerm"), screen_menu
+            )
             act_screen.triggered.connect(self.start_screen_read)
             screen_menu.addAction(act_screen)
             self._screen_menu = screen_menu
@@ -162,6 +178,10 @@ class TrayApp:
             self.mic.setVisible(icons.get("dikter", True))
         if self.screen_icon:
             self.screen_icon.setVisible(icons.get("skaerm", True))
+        if self._settings is None or self._settings.config.icons_always_visible:
+            # Windows opretter først sit valg for ikonerne, når de er vist et øjeblik
+            for delay in (2000, 10000):
+                QTimer.singleShot(delay, lambda: self.set_icons_always_visible(True))
         # Lad Ctrl+C/SIGTERM lukke pænt: Python ser kun signaler, når den får lov at køre.
         signal.signal(signal.SIGINT, lambda *_: self.app.quit())
         signal.signal(signal.SIGTERM, lambda *_: self.app.quit())
@@ -191,6 +211,24 @@ class TrayApp:
         dialog.finished.connect(lambda _: setattr(self, "_settings_dialog", None))
         self._settings_dialog = dialog
         dialog.show()
+
+    def set_icons_always_visible(self, visible: bool) -> None:
+        from ordhjaelp.platform import set_tray_icons_always_visible
+
+        set_tray_icons_always_visible(visible)
+
+    def open_shortcuts(self) -> None:
+        from ordhjaelp.config import Config
+        from ordhjaelp.ui.shortcuts import ShortcutsDialog
+
+        cfg = self._settings.config if self._settings is not None else Config()
+        if self._hotkeys is not None:
+            cfg.hotkeys = dict(self._hotkeys)
+        if self._shortcuts_dialog is None:
+            self._shortcuts_dialog = ShortcutsDialog(cfg)
+        self._shortcuts_dialog.show()
+        self._shortcuts_dialog.raise_()
+        self._shortcuts_dialog.activateWindow()
 
     def set_icon_visible(self, name: str, visible: bool) -> None:
         icon = {"dikter": self.mic, "skaerm": self.screen_icon}.get(name)
@@ -255,5 +293,5 @@ class TrayApp:
 
     def _set_speaking(self, speaking: bool) -> None:
         self.tray.setIcon(self._icon_stop if speaking else self._icon_idle)
-        self.tray.setToolTip(TOOLTIP_SPEAKING if speaking else TOOLTIP_IDLE)
+        self.tray.setToolTip(TOOLTIP_SPEAKING if speaking else self._tooltip_idle)
         self._act_stop.setEnabled(speaking)

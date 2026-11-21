@@ -29,13 +29,14 @@ from ordhjaelp.config import Config, save_config
 from ordhjaelp.models.catalog import Kind, of_kind, size_text
 from ordhjaelp.models.store import ModelStore
 from ordhjaelp.platform.base import Autostart, TypingSetup
+from ordhjaelp.ui.shortcuts import POINTER_ACTIONS, shortcut_for
 from ordhjaelp.ui.typing_setup import OK_COLOR, TypingSetupDialog, all_ok, summary
 
 log = logging.getLogger(__name__)
 
 PREVIEW_TEXT = "Hej! Sådan lyder jeg, når jeg læser op for dig."
 KEYS_HELP_LINUX = "Tastaturgenveje ændres i Systemindstillinger →\nTastaturgenveje → Ordhjælp."
-KEYS_HELP_WINDOWS = "Tastaturgenveje ændres under [genveje] i indstillingsfilen (config.toml)."
+KEYS_HELP_WINDOWS = "Tastaturgenveje ændres under [genveje]\ni indstillingsfilen (config.toml)."
 
 
 @dataclass
@@ -52,6 +53,7 @@ class SettingsHooks:
     models: ModelStore | None = None
     set_read_on_select: Callable[[bool], None] | None = None
     typing_setup: TypingSetup | None = None
+    set_icons_always_visible: Callable[[bool], None] | None = None  # sættes af brugerfladen
 
 
 def needs_restart(old: Config, new: Config) -> bool:
@@ -118,9 +120,10 @@ class SettingsDialog(QDialog):
         form.addRow(self.read_at_pointer)
         # Faste linjeskift, aldrig setWordWrap: en QLabel med automatisk linjeskift
         # får Qt til at gøre vinduet for smalt, så tekst klippes eller forsvinder
+        keys = {a: shortcut_for(cfg.hotkeys, a) for a in POINTER_ACTIONS}
         note = QLabel(
-            "Peg med musen og tryk Ctrl+Alt+1 (ordet), Ctrl+Alt+2 (sætningen)\n"
-            "eller Ctrl+Alt+3 (herfra og videre). Virker fx i "
+            f"Peg med musen og tryk {keys['laes_ord']} (ordet), {keys['laes_saetning']} "
+            f"(sætningen)\neller {keys['laes_herfra']} (herfra og videre). Virker fx i "
             + ("Word, Edge og Notesblok." if sys.platform == "win32" else "Firefox og LibreOffice.")
         )
         note.setStyleSheet("color: gray")
@@ -174,6 +177,10 @@ class SettingsDialog(QDialog):
         info = QLabel("Det blå ikon (læs op) vises altid – her ligger også denne menu.")
         info.setStyleSheet("color: gray")
         col.addWidget(info)
+        self.icons_always = QCheckBox("Vis altid ikonerne ved uret (ikke gemt under ^)")
+        self.icons_always.setChecked(cfg.icons_always_visible)
+        self.icons_always.setVisible(sys.platform == "win32")  # Windows 11 skjuler nye ikoner
+        col.addWidget(self.icons_always)
         layout.addWidget(box)
 
         self.autostart = QCheckBox("Start Ordhjælp automatisk, når der logges ind")
@@ -183,9 +190,15 @@ class SettingsDialog(QDialog):
             self.autostart.setChecked(hooks.autostart.is_enabled())
         layout.addWidget(self.autostart)
 
-        keys = QLabel(KEYS_HELP_WINDOWS if sys.platform == "win32" else KEYS_HELP_LINUX)
-        keys.setStyleSheet("color: gray")
-        layout.addWidget(keys)
+        keys_row = QHBoxLayout()
+        keys_label = QLabel(KEYS_HELP_WINDOWS if sys.platform == "win32" else KEYS_HELP_LINUX)
+        keys_label.setStyleSheet("color: gray")
+        keys_row.addWidget(keys_label, 1)
+        show_keys = QPushButton("Vis alle genveje …")
+        show_keys.setToolTip("Oversigt over alle genveje og tasterne til ordforslag")
+        show_keys.clicked.connect(self._open_shortcuts)
+        keys_row.addWidget(show_keys)
+        layout.addLayout(keys_row)
 
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
@@ -253,6 +266,11 @@ class SettingsDialog(QDialog):
         self.typing_status.setText(text)
         self.typing_status.setStyleSheet(f"color: {color}")
 
+    def _open_shortcuts(self) -> None:
+        from ordhjaelp.ui.shortcuts import ShortcutsDialog
+
+        ShortcutsDialog(self.collect(), self).exec()
+
     def _open_typing_setup(self) -> None:
         assert self._hooks.typing_setup is not None
         TypingSetupDialog(self._hooks.typing_setup, self).exec()
@@ -316,6 +334,7 @@ class SettingsDialog(QDialog):
         cfg.read_sentence_on_period = self.read_sentence.isChecked()
         cfg.show_icons["dikter"] = self.icon_mic.isChecked()
         cfg.show_icons["skaerm"] = self.icon_screen.isChecked()
+        cfg.icons_always_visible = self.icons_always.isChecked()
         return cfg
 
     def accept(self) -> None:  # noqa: D102
@@ -327,6 +346,11 @@ class SettingsDialog(QDialog):
             hooks.set_read_on_select(new.read_on_select)
         for name in ("dikter", "skaerm"):
             hooks.set_icon_visible(name, new.show_icons[name])
+        if (
+            hooks.set_icons_always_visible is not None
+            and new.icons_always_visible != self._original.icons_always_visible
+        ):
+            hooks.set_icons_always_visible(new.icons_always_visible)
         if hooks.autostart is not None and self.autostart.isEnabled():
             try:
                 hooks.autostart.set_enabled(self.autostart.isChecked())
