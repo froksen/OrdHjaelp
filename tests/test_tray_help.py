@@ -9,7 +9,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PySide6.QtWidgets import QApplication, QPushButton  # noqa: E402
 
 from ordhjaelp import config as config_mod  # noqa: E402
-from ordhjaelp.config import Config  # noqa: E402
+from ordhjaelp.config import VIEW_TRAY, Config  # noqa: E402
 from ordhjaelp.ui import tray_help  # noqa: E402
 
 
@@ -53,8 +53,10 @@ def test_settings_button_only_on_windows(app, tmp_path, monkeypatch) -> None:
     from ordhjaelp.ui.settings import SettingsDialog, SettingsHooks
 
     monkeypatch.setattr(config_mod, "config_dir", lambda: tmp_path)
+    cfg = Config()
+    cfg.view = VIEW_TRAY
     hooks = SettingsHooks(
-        config=Config(),
+        config=cfg,
         set_speed=lambda s: None,
         say=lambda t: None,
         set_clipboard_fallback=lambda b: None,
@@ -62,4 +64,9 @@ def test_settings_button_only_on_windows(app, tmp_path, monkeypatch) -> None:
         restart=lambda: None,
     )
     dialog = SettingsDialog(hooks)
+    assert dialog.tray_help.isVisibleTo(dialog) == (sys.platform == "win32")
+    # Med knaplinjen er der ingen ikoner under ^ at vise frem
+    dialog.view_toolbar.setChecked(True)
+    assert not dialog.tray_help.isVisibleTo(dialog)
+    dialog.view_tray.setChecked(True)
     assert dialog.tray_help.isVisibleTo(dialog) == (sys.platform == "win32")
