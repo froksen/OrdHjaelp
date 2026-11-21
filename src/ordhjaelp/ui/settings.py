@@ -191,7 +191,7 @@ class SettingsDialog(QDialog):
         col.addWidget(self.view_tray)
         info = QLabel(
             "Knaplinjen kan flyttes, og den kan foldes ind med ‹.\n"
-            "Det blå ikon ved uret vises altid – her ligger også denne menu."
+            "Med knaplinjen vises intet ved uret. Menuen ligger under ⋯."
         )
         info.setStyleSheet("color: gray")
         col.addWidget(info)
