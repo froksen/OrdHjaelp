@@ -101,12 +101,16 @@ class TrayApp:
         act_keys = QAction("Genveje …", menu)
         act_keys.triggered.connect(self.open_shortcuts)
         menu.addAction(act_keys)
+        self._tray_help_dialog = None
+        if sys.platform == "win32":  # Windows 11 gemmer nye ikoner under ^
+            act_tray_help = QAction("Vis ikonerne ved uret …", menu)
+            act_tray_help.triggered.connect(self.open_tray_help)
+            menu.addAction(act_tray_help)
         self._settings = settings
         self._settings_dialog = None
         self._shortcuts_dialog = None
         if settings is not None:
             settings.set_icon_visible = self.set_icon_visible
-            settings.set_icons_always_visible = self.set_icons_always_visible
             act_settings = QAction("Indstillinger …", menu)
             act_settings.triggered.connect(self.open_settings)
             menu.addAction(act_settings)
@@ -178,10 +182,8 @@ class TrayApp:
             self.mic.setVisible(icons.get("dikter", True))
         if self.screen_icon:
             self.screen_icon.setVisible(icons.get("skaerm", True))
-        if self._settings is None or self._settings.config.icons_always_visible:
-            # Windows opretter først sit valg for ikonerne, når de er vist et øjeblik
-            for delay in (2000, 10000):
-                QTimer.singleShot(delay, lambda: self.set_icons_always_visible(True))
+        if sys.platform == "win32":
+            QTimer.singleShot(3000, self._first_run_tray_tip)
         # Lad Ctrl+C/SIGTERM lukke pænt: Python ser kun signaler, når den får lov at køre.
         signal.signal(signal.SIGINT, lambda *_: self.app.quit())
         signal.signal(signal.SIGTERM, lambda *_: self.app.quit())
@@ -212,10 +214,30 @@ class TrayApp:
         self._settings_dialog = dialog
         dialog.show()
 
-    def set_icons_always_visible(self, visible: bool) -> None:
-        from ordhjaelp.platform import set_tray_icons_always_visible
+    # -- ikonerne ved uret (Windows 11 gemmer dem under ^) -------------
+    def _first_run_tray_tip(self) -> None:
+        """Første gang: fortæl, at ikonerne måske er gemt, og hvordan de vises."""
+        from ordhjaelp.ui import tray_help
 
-        set_tray_icons_always_visible(visible)
+        try:
+            if not tray_help.should_show_first_run_tip():
+                return
+            tray_help.remember_first_run_tip()
+        except OSError:
+            return
+        self.tray.messageClicked.connect(self.open_tray_help)
+        self.tray.showMessage(tray_help.TIP_TITLE, tray_help.TIP_TEXT, self._icon_idle, 15000)
+
+    def open_tray_help(self) -> None:
+        from ordhjaelp.platform import open_tray_icon_settings
+        from ordhjaelp.ui.tray_help import TrayIconsHelpDialog
+
+        if self._tray_help_dialog is None:
+            self._tray_help_dialog = TrayIconsHelpDialog(open_tray_icon_settings)
+            self._tray_help_dialog.setWindowIcon(self._icon_idle)
+        self._tray_help_dialog.show()
+        self._tray_help_dialog.raise_()
+        self._tray_help_dialog.activateWindow()
 
     def open_shortcuts(self) -> None:
         from ordhjaelp.config import Config

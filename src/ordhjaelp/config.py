@@ -65,8 +65,6 @@ class Config:
     )
     # Hvilke ikoner der vises ved uret (læs op-ikonet vises altid – det har menuen)
     show_icons: dict[str, bool] = field(default_factory=lambda: {"dikter": True, "skaerm": True})
-    # Windows 11 skjuler nye ikoner under ^ ved uret. Ordhjælps ikoner skal kunne ses.
-    icons_always_visible: bool = True
 
     @property
     def typing_help_enabled(self) -> bool:
@@ -96,7 +94,7 @@ class Config:
         cfg.prediction_enabled = bool(prediction.get("aktiv", cfg.prediction_enabled))
         cfg.hotkeys.update({str(k): str(v) for k, v in raw.get("genveje", {}).items()})
         icons = dict(raw.get("ikoner", {}))
-        cfg.icons_always_visible = bool(icons.pop("altid_synlige", cfg.icons_always_visible))
+        icons.pop("altid_synlige", None)  # fra version 0.2 (virkede ikke), er ikke et ikon
         cfg.show_icons.update({str(k): bool(v) for k, v in icons.items()})
         return cfg
 
@@ -147,8 +145,6 @@ aktiv = {b(self.prediction_enabled)}
 [ikoner]
 # Vis ikoner ved uret (dikter = mikrofon, skaerm = læs fra skærmen)
 {icons}
-# Windows: vis altid ikonerne ved uret (ikke gemt under ^)
-altid_synlige = {b(self.icons_always_visible)}
 
 [genveje]
 # Ønskede tastaturgenveje. På KDE/GNOME kan de ændres i systemindstillingerne.
