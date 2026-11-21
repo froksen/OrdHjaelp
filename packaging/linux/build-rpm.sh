@@ -12,8 +12,10 @@ APP="$STAGE/opt/ordhjaelp"
 APP_ID=dk.ordhjaelp.Ordhjaelp
 
 STAGE_ONLY=${STAGE_ONLY:-0}  # 1 = saml kun filerne (til test), byg ikke RPM
-if [ "$STAGE_ONLY" != 1 ]; then
-    command -v rpmbuild >/dev/null || { echo "Mangler rpmbuild: sudo dnf install rpm-build" >&2; exit 1; }
+# rpmbuild køres lokalt, hvis det findes – ellers i en Fedora-container med podman
+if [ "$STAGE_ONLY" != 1 ] && ! command -v rpmbuild >/dev/null && ! command -v podman >/dev/null; then
+    echo "Mangler rpmbuild (sudo dnf install rpm-build) eller podman" >&2
+    exit 1
 fi
 
 echo "==> Ordhjælp $VERSION"
@@ -56,12 +58,21 @@ if [ "$STAGE_ONLY" = 1 ]; then
 fi
 
 echo "==> Bygger RPM ($(du -sh "$STAGE" | cut -f1) ukomprimeret)"
-rpmbuild -bb "$ROOT/packaging/linux/ordhjaelp.spec" \
-    --define "_topdir $WORK/rpmbuild" \
-    --define "stage $STAGE" \
-    --define "ordhjaelp_version $VERSION" \
-    --define "_binary_payload w19.zstdio" \
-    --quiet
+RPMBUILD_ARGS=(-bb "$ROOT/packaging/linux/ordhjaelp.spec"
+    --define "_topdir $WORK/rpmbuild"
+    --define "stage $STAGE"
+    --define "ordhjaelp_version $VERSION"
+    --define "_binary_payload w19.zstdio"
+    --quiet)
+if command -v rpmbuild >/dev/null; then
+    rpmbuild "${RPMBUILD_ARGS[@]}"
+else
+    FEDORA=$(rpm -E %fedora)
+    echo "    (rpmbuild findes ikke – bruger en Fedora $FEDORA-container)"
+    podman run --rm --security-opt label=disable -v "$ROOT:$ROOT" \
+        "registry.fedoraproject.org/fedora:$FEDORA" \
+        bash -c 'dnf -y -q install rpm-build >/dev/null && rpmbuild "$@"' rpmbuild "${RPMBUILD_ARGS[@]}"
+fi
 RPM=$(find "$WORK/rpmbuild/RPMS" -name '*.rpm' | head -1)
 cp "$RPM" "$WORK/"
 echo "==> Færdig: $WORK/$(basename "$RPM") ($(du -h "$RPM" | cut -f1))"
