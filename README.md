@@ -203,6 +203,7 @@ forslagene fra Ordhjælp-tjenesten.
 ## Udvikling
 
 ```bash
+scripts/tjek.sh                   # alt det, GitHub Actions kører på Linux (før push)
 uv run pytest                     # tests
 uv run ruff check . && uv run ruff format .
 ORDHJAELP_IBUS_TEST=1 uv run pytest tests/integration   # IBus-test med privat ibus-daemon
