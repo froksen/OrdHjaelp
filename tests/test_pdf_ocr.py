@@ -17,6 +17,7 @@ from ordhjaelp.ocr.pdf import (  # noqa: E402
     make_searchable,
     searchable_path,
 )
+from ordhjaelp.services.screen_read import OcrUnavailable  # noqa: E402
 
 SCANNED_TEXT = "Hunden løb over græsset i haven"
 REAL_TEXT = "Dette er en almindelig side med rigtig tekst i"
@@ -153,6 +154,19 @@ def test_already_searchable_writes_nothing(app, tmp_path):
     with pytest.raises(AlreadySearchable):
         make_searchable(src, dst, ocr_page=fake_ocr([]))
     assert not dst.exists()
+
+
+def test_already_searchable_without_tesseract(app, tmp_path, monkeypatch):
+    """En PDF med tekst skal ikke give "Tesseract mangler", når Tesseract ikke findes."""
+    import ordhjaelp.ocr.pdf as pdf
+
+    monkeypatch.setattr(pdf, "find_tesseract", lambda: None)
+    src = make_pdf(tmp_path / "tekst.pdf", [("tekst", REAL_TEXT)])
+    with pytest.raises(AlreadySearchable):
+        make_searchable(src, tmp_path / "ud.pdf")
+    scan = make_pdf(tmp_path / "scan.pdf", [("scannet", SCANNED_TEXT)])
+    with pytest.raises(OcrUnavailable):
+        make_searchable(scan, tmp_path / "ud.pdf")
 
 
 def test_cancel_writes_nothing(app, tmp_path):

@@ -78,8 +78,6 @@ def make_searchable(
     :raises Cancelled: progress returnerede False (intet skrevet).
     :raises PdfOcrError: filen kunne ikke læses eller skrives.
     """
-    if ocr_page is None:
-        ocr_page = _tesseract_page(language)
     try:
         source = pdfium.PdfDocument(str(src))
     except pdfium.PdfiumError as exc:
@@ -90,6 +88,9 @@ def make_searchable(
         scanned = [i for i in range(len(source)) if not page_has_text(source[i])]
         if not scanned:
             raise AlreadySearchable("Denne PDF har allerede tekst. Den kan læses op, som den er.")
+        # Først nu: en PDF med tekst skal kunne bruges, selv om Tesseract mangler
+        if ocr_page is None:
+            ocr_page = _tesseract_page(language)
         log.info("OCR af %d af %d sider i %s", len(scanned), len(source), src)
         with tempfile.TemporaryDirectory(prefix="ordhjaelp-pdf-") as tmp:
             result = _build(source, scanned, Path(tmp), ocr_page, progress)
