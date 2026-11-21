@@ -1,4 +1,4 @@
-"""Indstillingsvindue (til voksne): tempo, diktering, ikoner og autostart."""
+"""Indstillingsvindue (til voksne) i fire faner: læs op, skriv, knapper, start og genveje."""
 
 from __future__ import annotations
 
@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
     QRadioButton,
     QScrollArea,
     QSlider,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -38,6 +39,13 @@ log = logging.getLogger(__name__)
 PREVIEW_TEXT = "Hej! Sådan lyder jeg, når jeg læser op for dig."
 KEYS_HELP_LINUX = "Tastaturgenveje ændres i Systemindstillinger →\nTastaturgenveje → Ordhjælp."
 KEYS_HELP_WINDOWS = "Tastaturgenveje ændres under [genveje]\ni indstillingsfilen (config.toml)."
+
+
+def _note(text: str) -> QLabel:
+    """Grå hjælpetekst. Brug faste linjeskift (\\n), aldrig setWordWrap."""
+    label = QLabel(text)
+    label.setStyleSheet("color: gray")
+    return label
 
 
 @dataclass
@@ -81,13 +89,15 @@ class SettingsDialog(QDialog):
         self._original = copy.deepcopy(hooks.config)
         cfg = hooks.config
         self.setWindowTitle("Ordhjælp – indstillinger")
-        # Indholdet kan rulles: på en lille skærm (fx 1366x768 med 125 % skalering)
-        # er der ikke plads til det hele, og så ville Qt klemme tekst sammen eller skjule den
-        content = QWidget()
-        layout = QVBoxLayout(content)
+        # Fire faner, så der ikke er så meget at se på ad gangen. Hver fane kan rulles:
+        # på en lille skærm (fx 1366x768 med 125 % skalering) er der ikke plads til
+        # det hele, og så ville Qt klemme tekst sammen eller skjule den
+        self._tabs = QTabWidget()
+        self._pages: list[tuple[QScrollArea, QWidget]] = []
 
-        # -- Oplæsning --------------------------------------------------
-        box = QGroupBox("Oplæsning")
+        # == Fane: Læs op ==================================================
+        layout = self._add_page("Læs op")
+        box = QGroupBox("Stemme")
         form = QFormLayout(box)
         self.speed = QSlider(Qt.Orientation.Horizontal)
         self.speed.setRange(60, 150)  # 0,60 – 1,50
@@ -108,31 +118,38 @@ class SettingsDialog(QDialog):
         prow.addStretch()
         prow.addWidget(preview)
         form.addRow("", prow)
-        self.clipboard = QCheckBox("Læs udklipsholderen (Ctrl+C), hvis intet er markeret")
-        self.clipboard.setChecked(cfg.use_clipboard_fallback)
-        form.addRow(self.clipboard)
+        layout.addWidget(box)
+
+        box = QGroupBox("Andre måder at få læst op")
+        col = QVBoxLayout(box)
         self.read_on_select = QCheckBox("Læs op, så snart der markeres tekst med musen")
         self.read_on_select.setChecked(cfg.read_on_select)
-        form.addRow(self.read_on_select)
-        note = QLabel("Dobbeltklik læser et ord. Trippelklik læser linjen eller afsnittet.")
-        note.setStyleSheet("color: gray")
-        form.addRow(note)
+        col.addWidget(self.read_on_select)
+        col.addWidget(_note("Dobbeltklik læser et ord. Trippelklik læser linjen eller afsnittet."))
         self.read_at_pointer = QCheckBox("Læs under musen med genveje")
         self.read_at_pointer.setChecked(cfg.read_at_pointer)
-        form.addRow(self.read_at_pointer)
+        col.addWidget(self.read_at_pointer)
         # Faste linjeskift, aldrig setWordWrap: en QLabel med automatisk linjeskift
         # får Qt til at gøre vinduet for smalt, så tekst klippes eller forsvinder
         keys = {a: shortcut_for(cfg.hotkeys, a) for a in POINTER_ACTIONS}
-        note = QLabel(
-            f"Peg med musen og tryk {keys['laes_ord']} (ordet), {keys['laes_saetning']} "
-            f"(sætningen)\neller {keys['laes_herfra']} (herfra og videre). Virker fx i "
-            + ("Word, Edge og Notesblok." if sys.platform == "win32" else "Firefox og LibreOffice.")
+        col.addWidget(
+            _note(
+                f"Peg med musen og tryk {keys['laes_ord']} (ordet), {keys['laes_saetning']} "
+                f"(sætningen)\neller {keys['laes_herfra']} (herfra og videre). Virker fx i "
+                + (
+                    "Word, Edge og Notesblok."
+                    if sys.platform == "win32"
+                    else "Firefox og LibreOffice."
+                )
+            )
         )
-        note.setStyleSheet("color: gray")
-        form.addRow(note)
+        self.clipboard = QCheckBox("Læs udklipsholderen (Ctrl+C), hvis intet er markeret")
+        self.clipboard.setChecked(cfg.use_clipboard_fallback)
+        col.addWidget(self.clipboard)
         layout.addWidget(box)
 
-        # -- Diktering --------------------------------------------------
+        # == Fane: Skriv ===================================================
+        layout = self._add_page("Skriv")
         box = QGroupBox("Diktering")
         form = QFormLayout(box)
         self.dictation = QCheckBox("Slå diktering til")
@@ -152,7 +169,6 @@ class SettingsDialog(QDialog):
         self._update_model_enabled()
         layout.addWidget(box)
 
-        # -- Ordforslag ---------------------------------------------------
         box = QGroupBox("Mens der skrives")
         col = QVBoxLayout(box)
         self.prediction = QCheckBox("Vis ordforslag, mens der skrives")
@@ -167,35 +183,34 @@ class SettingsDialog(QDialog):
         self._add_typing_status(col)
         layout.addWidget(box)
 
-        # -- Scannede PDF'er -----------------------------------------------
-        box = QGroupBox("Scannede PDF'er")
-        col = QVBoxLayout(box)
-        self.pdf_ocr = QCheckBox('Vis "Gør en PDF søgbar" i menuen')
-        self.pdf_ocr.setChecked(cfg.pdf_ocr_enabled)
-        col.addWidget(self.pdf_ocr)
-        note = QLabel(
-            "Laver en kopi af en scannet PDF, hvor teksten kan markeres\n"
-            "og læses op. Den gamle PDF bliver ikke ændret."
-        )
-        note.setStyleSheet("color: gray")
-        col.addWidget(note)
-        layout.addWidget(box)
-
-        # -- Knapper og start -------------------------------------------
-        box = QGroupBox("Knapper")
+        # == Fane: Knapper =================================================
+        layout = self._add_page("Knapper")
+        box = QGroupBox("Hvor knapperne vises")
         col = QVBoxLayout(box)
         self.view_toolbar = QRadioButton("En lille knaplinje på skærmen")
         self.view_tray = QRadioButton("Et ikon for hver knap ved uret")
         (self.view_tray if cfg.view == VIEW_TRAY else self.view_toolbar).setChecked(True)
         col.addWidget(self.view_toolbar)
         col.addWidget(self.view_tray)
-        info = QLabel(
-            "Knaplinjen kan flyttes, og den kan foldes ind med ‹.\n"
-            "Med knaplinjen vises intet ved uret. Menuen ligger under ⋯."
+        col.addWidget(
+            _note(
+                "Knaplinjen kan flyttes, og den kan foldes ind med ‹.\n"
+                "Med knaplinjen vises intet ved uret. Menuen ligger under ⋯."
+            )
         )
-        info.setStyleSheet("color: gray")
-        col.addWidget(info)
-        col.addWidget(QLabel("Vis disse knapper ud over læs op:"))
+        # Windows 11 gemmer nye ikoner under ^. Kun brugeren kan vælge at vise dem.
+        self.tray_help = QPushButton("Vis ikonerne ved uret …")
+        self.tray_help.setToolTip("Sådan bliver ikonerne synlige i stedet for gemt under ^")
+        self.tray_help.clicked.connect(self._open_tray_help)
+        self.view_tray.toggled.connect(
+            lambda on: self.tray_help.setVisible(on and sys.platform == "win32")
+        )
+        self.tray_help.setVisible(self.view_tray.isChecked() and sys.platform == "win32")
+        col.addWidget(self.tray_help, 0, Qt.AlignmentFlag.AlignLeft)
+        layout.addWidget(box)
+
+        box = QGroupBox("Vis disse knapper ud over læs op")
+        col = QVBoxLayout(box)
         self.icon_mic = QCheckBox("Mikrofon (diktering)")
         self.icon_mic.setChecked(cfg.show_icons.get("dikter", True))
         self.icon_screen = QCheckBox("Læs fra skærmen")
@@ -205,34 +220,44 @@ class SettingsDialog(QDialog):
         col.addWidget(self.icon_mic)
         col.addWidget(self.icon_screen)
         col.addWidget(self.icon_pdf)
-        # Windows 11 gemmer nye ikoner under ^. Kun brugeren kan vælge at vise dem.
-        self.tray_help = QPushButton("Vis ikonerne ved uret …")
-        self.tray_help.setToolTip("Sådan bliver ikonerne synlige i stedet for gemt under ^")
-        self.tray_help.clicked.connect(self._open_tray_help)
-        self.tray_help.setVisible(sys.platform == "win32")
-        self.view_tray.toggled.connect(
-            lambda on: self.tray_help.setVisible(on and sys.platform == "win32")
+        self.pdf_ocr = QCheckBox('Vis også "Gør en PDF søgbar" i menuen')
+        self.pdf_ocr.setChecked(cfg.pdf_ocr_enabled)
+        col.addWidget(self.pdf_ocr)
+        col.addWidget(
+            _note(
+                "Gør en PDF søgbar laver en kopi af en scannet PDF, hvor teksten\n"
+                "kan markeres og læses op. Den gamle PDF bliver ikke ændret."
+            )
         )
-        self.tray_help.setVisible(self.view_tray.isChecked() and sys.platform == "win32")
-        col.addWidget(self.tray_help, 0, Qt.AlignmentFlag.AlignLeft)
         layout.addWidget(box)
 
+        # == Fane: Start og genveje ========================================
+        layout = self._add_page("Start og genveje")
+        box = QGroupBox("Start")
+        col = QVBoxLayout(box)
         self.autostart = QCheckBox("Start Ordhjælp automatisk, når der logges ind")
         if hooks.autostart is None:
             self.autostart.setEnabled(False)
         else:
             self.autostart.setChecked(hooks.autostart.is_enabled())
-        layout.addWidget(self.autostart)
+        col.addWidget(self.autostart)
+        layout.addWidget(box)
 
-        keys_row = QHBoxLayout()
-        keys_label = QLabel(KEYS_HELP_WINDOWS if sys.platform == "win32" else KEYS_HELP_LINUX)
-        keys_label.setStyleSheet("color: gray")
-        keys_row.addWidget(keys_label, 1)
+        box = QGroupBox("Tastaturgenveje")
+        col = QVBoxLayout(box)
+        col.addWidget(_note(KEYS_HELP_WINDOWS if sys.platform == "win32" else KEYS_HELP_LINUX))
         show_keys = QPushButton("Vis alle genveje …")
         show_keys.setToolTip("Oversigt over alle genveje og tasterne til ordforslag")
         show_keys.clicked.connect(self._open_shortcuts)
-        keys_row.addWidget(show_keys)
-        layout.addLayout(keys_row)
+        col.addWidget(show_keys, 0, Qt.AlignmentFlag.AlignLeft)
+        layout.addWidget(box)
+
+        for _, content in self._pages:
+            content.layout().addStretch(1)  # grupperne øverst, ikke spredt ud
+        widest = max(content.sizeHint().width() for _, content in self._pages)
+        for scroll, _ in self._pages:
+            scrollbar = scroll.verticalScrollBar().sizeHint().width()
+            scroll.setMinimumWidth(max(480, widest) + scrollbar)
 
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
@@ -241,26 +266,26 @@ class SettingsDialog(QDialog):
         buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Annullér")
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
+        outer = QVBoxLayout(self)
+        outer.addWidget(self._tabs, 1)
+        outer.addWidget(buttons)
+        self._outer = outer
+        self._buttons = buttons
+        self._fit_to_screen()
+        self._speed_changed(self.speed.value())
+
+    def _add_page(self, title: str) -> QVBoxLayout:
+        """En ny fane, der kan rulles. Returnerer layoutet, som grupperne lægges i."""
+        content = QWidget()
+        layout = QVBoxLayout(content)
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QScrollArea.Shape.NoFrame)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll.setWidget(content)
-        scrollbar = scroll.verticalScrollBar().sizeHint().width()
-        scroll.setMinimumWidth(max(480, content.sizeHint().width()) + scrollbar)
-        outer = QVBoxLayout(self)
-        outer.setContentsMargins(0, 0, 0, 0)
-        outer.addWidget(scroll, 1)
-        bottom = QVBoxLayout()
-        bottom.setContentsMargins(11, 0, 11, 11)
-        bottom.addWidget(buttons)
-        outer.addLayout(bottom)
-        self._content = content
-        self._scroll = scroll
-        self._bottom = bottom
-        self._outer = outer
-        self._fit_to_screen()
-        self._speed_changed(self.speed.value())
+        self._tabs.addTab(scroll, title)
+        self._pages.append((scroll, content))
+        return layout
 
     # -- ordforslag: er systemet sat op (IBus på Linux)? ---------------------
     def _add_typing_status(self, col: QVBoxLayout) -> None:
@@ -343,11 +368,18 @@ class SettingsDialog(QDialog):
         self._update_model_enabled()
 
     def _fit_to_screen(self) -> None:
-        """Så højt som indholdet, men aldrig højere end skærmen."""
+        """Så højt som den højeste fane, men aldrig højere end skærmen."""
+        tallest = max(content.sizeHint().height() for _, content in self._pages)
+        tab_bar = self._tabs.tabBar().sizeHint().height()
+        margins = self._outer.contentsMargins()
         wanted = (
-            self._content.sizeHint().height()
+            tallest
+            + tab_bar
+            + 8  # fanens kant
             + self._outer.spacing()
-            + self._bottom.sizeHint().height()
+            + self._buttons.sizeHint().height()
+            + margins.top()
+            + margins.bottom()
         )
         screen = self.screen()
         if screen is not None:

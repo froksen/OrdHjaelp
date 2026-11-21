@@ -64,9 +64,10 @@ def test_settings_button_only_on_windows(app, tmp_path, monkeypatch) -> None:
         restart=lambda: None,
     )
     dialog = SettingsDialog(hooks)
-    assert dialog.tray_help.isVisibleTo(dialog) == (sys.platform == "win32")
+    # Knappen ligger på fanen Knapper, som ikke er åben: se på knappen selv, ikke fanen
+    assert (not dialog.tray_help.isHidden()) == (sys.platform == "win32")
     # Med knaplinjen er der ingen ikoner under ^ at vise frem
     dialog.view_toolbar.setChecked(True)
-    assert not dialog.tray_help.isVisibleTo(dialog)
+    assert dialog.tray_help.isHidden()
     dialog.view_tray.setChecked(True)
-    assert dialog.tray_help.isVisibleTo(dialog) == (sys.platform == "win32")
+    assert (not dialog.tray_help.isHidden()) == (sys.platform == "win32")
