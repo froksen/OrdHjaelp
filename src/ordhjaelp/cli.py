@@ -63,9 +63,17 @@ def main(argv: list[str] | None = None) -> int:
         print(ensure_voice(cfg.voice, voices_dir()))
         return 0
 
+    if args.cmd in ("installer", "afinstaller") and sys.platform == "win32":
+        from ordhjaelp.platform.windows.install import WindowsAutostart
+
+        autostart = WindowsAutostart()
+        autostart.set_enabled(args.cmd == "installer" and args.autostart)
+        print("Autostart ved login:", "til" if autostart.is_enabled() else "fra")
+        return 0
+
     if args.cmd in ("installer", "afinstaller"):
         if not sys.platform.startswith("linux"):
-            print("Kun understøttet på Linux indtil videre", file=sys.stderr)
+            print("Kun understøttet på Linux og Windows indtil videre", file=sys.stderr)
             return 1
         from ordhjaelp.platform.linux import install
 

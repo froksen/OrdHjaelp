@@ -20,7 +20,11 @@ import signal
 import subprocess
 import threading
 
+from ordhjaelp.platform.freshness import FreshnessTracker
+
 log = logging.getLogger(__name__)
+
+__all__ = ["FreshnessTracker", "LinuxSelection"]
 
 _TIMEOUT = 2.0
 
@@ -55,27 +59,6 @@ def _run(cmds: list[list[str]]) -> str | None:
         text = result.stdout.decode("utf-8", errors="replace").strip()
         return text or None
     return None
-
-
-class FreshnessTracker:
-    """Afgør om en markering er ny eller allerede læst op.
-
-    serial er et tal, der stiger hver gang markeringen ændrer sig (eller None,
-    hvis vi ikke kan overvåge ændringer – så sammenlignes kun teksten).
-    """
-
-    def __init__(self) -> None:
-        self._last: tuple[str, int | None] | None = None
-
-    def fresh(self, text: str | None, serial: int | None) -> str | None:
-        if not text:
-            return None
-        if self._last is not None:
-            last_text, last_serial = self._last
-            if text == last_text and serial == last_serial:
-                return None  # samme markering som sidst – allerede læst op
-        self._last = (text, serial)
-        return text
 
 
 def _die_with_parent() -> None:

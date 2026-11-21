@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import logging
+import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 
@@ -29,6 +30,8 @@ from ordhjaelp.stt.whisper_engine import MODEL_CHOICES
 log = logging.getLogger(__name__)
 
 PREVIEW_TEXT = "Hej! Sådan lyder jeg, når jeg læser op for dig."
+KEYS_HELP_LINUX = "Tastaturgenveje ændres i Systemindstillinger → Tastaturgenveje → Ordhjælp."
+KEYS_HELP_WINDOWS = "Tastaturgenveje ændres under [genveje] i indstillingsfilen (config.toml)."
 
 
 @dataclass
@@ -166,7 +169,7 @@ class SettingsDialog(QDialog):
             self.autostart.setChecked(hooks.autostart.is_enabled())
         layout.addWidget(self.autostart)
 
-        keys = QLabel("Tastaturgenveje ændres i Systemindstillinger → Tastaturgenveje → Ordhjælp.")
+        keys = QLabel(KEYS_HELP_WINDOWS if sys.platform == "win32" else KEYS_HELP_LINUX)
         keys.setWordWrap(True)
         keys.setStyleSheet("color: gray")
         layout.addWidget(keys)

@@ -99,7 +99,7 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
             return {"ok": True, "tilstand": dictation.toggle().value}
         if cmd == "afslut":
             # Samme vej som Ctrl+C, så både ikon- og baggrundstilstand lukker pænt
-            threading.Timer(0.1, os.kill, (os.getpid(), signal.SIGTERM)).start()
+            threading.Timer(0.1, _request_shutdown).start()
             return {"ok": True}
         return {"ok": False, "fejl": f"ukendt kommando: {cmd}"}
 
@@ -144,7 +144,7 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
 
     def restart() -> None:
         restart_requested.set()
-        os.kill(os.getpid(), signal.SIGTERM)  # luk pænt – derefter startes forfra
+        _request_shutdown()  # luk pænt – derefter startes forfra
 
     try:
         hooks = _settings_hooks(cfg, tts, service, restart) if tray else None
@@ -280,9 +280,20 @@ def _run_tray(
     return True
 
 
+def _request_shutdown() -> None:
+    """Luk pænt via SIGTERM-håndteringen (samme vej som Ctrl+C)."""
+    if sys.platform == "win32":
+        # os.kill på Windows lukker processen brat uden oprydning. raise_signal kalder
+        # vores egen håndtering, ligesom SIGTERM gør på Linux.
+        signal.raise_signal(signal.SIGTERM)
+    else:
+        os.kill(os.getpid(), signal.SIGTERM)
+
+
 def _wait_for_signal() -> None:
     log.info("Ordhjælp kører uden ikon. Markér tekst og brug genvejen.")
     done = threading.Event()
     signal.signal(signal.SIGINT, lambda *_: done.set())
     signal.signal(signal.SIGTERM, lambda *_: done.set())
-    done.wait()
+    while not done.wait(0.5):  # med tidsgrænse: på Windows afbryder signaler ikke wait()
+        pass
