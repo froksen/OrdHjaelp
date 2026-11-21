@@ -36,5 +36,11 @@ class HotkeyProvider(Protocol):
     def stop(self) -> None: ...
 
 
+class TextInjector(Protocol):
+    def insert(self, text: str) -> None:
+        """Skriv tekst ind, hvor markøren står i det aktive program."""
+        ...
+
+
 class PlatformNotSupported(RuntimeError):
     pass

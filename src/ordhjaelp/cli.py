@@ -23,6 +23,10 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("laes", help="læs markeret tekst op (eller stop, hvis der læses)")
     sub.add_parser("stop", help="stop oplæsning")
     sub.add_parser("afslut", help="luk Ordhjælp helt")
+    sub.add_parser("dikter", help="start/stop diktering")
+    p_cmp = sub.add_parser("sammenlign-modeller", help="test talegenkendelse med din egen stemme")
+    p_cmp.add_argument("--fil", help="brug en gemt optagelse i stedet for mikrofonen")
+    p_cmp.add_argument("modeller", nargs="*", help="modeller (standard: alle)")
     p_sig = sub.add_parser("sig", help="læs en tekst op")
     p_sig.add_argument("tekst", nargs="+")
     sub.add_parser("hent-stemme", help="hent den valgte stemme")
@@ -36,6 +40,8 @@ def main(argv: list[str] | None = None) -> int:
         level=logging.DEBUG if args.verbose else logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
+    for noisy in ("httpx", "httpx2", "huggingface_hub", "faster_whisper"):
+        logging.getLogger(noisy).setLevel(logging.WARNING)
     cfg = load_config()
 
     if args.cmd == "start":
@@ -62,6 +68,22 @@ def main(argv: list[str] | None = None) -> int:
         paths = install.install(args.autostart) if args.cmd == "installer" else install.uninstall()
         for path in paths:
             print(("Installeret: " if args.cmd == "installer" else "Fjernet: ") + str(path))
+        return 0
+
+    if args.cmd == "sammenlign-modeller":
+        from pathlib import Path
+
+        from ordhjaelp.config import data_dir, whisper_dir
+        from ordhjaelp.stt import compare
+
+        if args.fil:
+            audio = compare.load_wav(Path(args.fil))
+        else:
+            audio = compare.record_interactively()
+            saved = data_dir() / "sammenlign.wav"
+            compare.save_wav(audio, saved)
+            print(f"Optagelsen er gemt i {saved}")
+        compare.compare(audio, args.modeller or compare.DEFAULT_MODELS, whisper_dir())
         return 0
 
     if args.cmd == "status":

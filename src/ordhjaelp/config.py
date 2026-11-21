@@ -27,6 +27,10 @@ def voices_dir() -> Path:
     return data_dir() / "stemmer"
 
 
+def whisper_dir() -> Path:
+    return data_dir() / "talegenkendelse"
+
+
 DEFAULT_CONFIG = """\
 # Ordhjælp – indstillinger
 
@@ -39,10 +43,18 @@ tempo = 1.0
 # Slået fra som standard, da det kan læse gammel, kopieret tekst op.
 brug_udklipsholder = false
 
+[diktering]
+aktiv = true
+# Talegenkendelse (hentes automatisk første gang):
+#   "dansk-hurtig" – dansk, hurtig (standard)      "dansk-turbo" – dansk, mere præcis, langsommere
+#   "dansk-stor"   – dansk (CoRal røst), langsom   "hurtig"/"turbo" – generelle modeller
+model = "dansk-hurtig"
+
 [genveje]
 # Ønskede tastaturgenveje. På KDE/GNOME kan de ændres i systemindstillingerne.
 laes = "CTRL+ALT+L"
 stop = "CTRL+ALT+S"
+dikter = "CTRL+ALT+D"
 """
 
 
@@ -51,8 +63,10 @@ class Config:
     voice: str = "da_DK-talesyntese-medium"
     speed: float = 1.0
     use_clipboard_fallback: bool = False
+    dictation_enabled: bool = True
+    dictation_model: str = "dansk-hurtig"
     hotkeys: dict[str, str] = field(
-        default_factory=lambda: {"laes": "CTRL+ALT+L", "stop": "CTRL+ALT+S"}
+        default_factory=lambda: {"laes": "CTRL+ALT+L", "stop": "CTRL+ALT+S", "dikter": "CTRL+ALT+D"}
     )
 
     @classmethod
@@ -67,6 +81,9 @@ class Config:
         cfg.use_clipboard_fallback = bool(
             reading.get("brug_udklipsholder", cfg.use_clipboard_fallback)
         )
+        dictation = raw.get("diktering", {})
+        cfg.dictation_enabled = bool(dictation.get("aktiv", cfg.dictation_enabled))
+        cfg.dictation_model = str(dictation.get("model", cfg.dictation_model))
         cfg.hotkeys.update({str(k): str(v) for k, v in raw.get("genveje", {}).items()})
         return cfg
 

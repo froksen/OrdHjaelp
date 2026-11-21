@@ -9,9 +9,10 @@ import threading
 
 from ordhjaelp import ipc
 from ordhjaelp.audio.player import Player
-from ordhjaelp.config import Config, voices_dir
-from ordhjaelp.platform import get_hotkey_provider, get_selection_provider
+from ordhjaelp.config import Config, voices_dir, whisper_dir
+from ordhjaelp.platform import get_hotkey_provider, get_selection_provider, get_text_injector
 from ordhjaelp.platform.base import HotkeyProvider
+from ordhjaelp.services.dictation import DictationService
 from ordhjaelp.services.read_aloud import ReadAloudService
 from ordhjaelp.tts.piper_engine import PiperEngine, ensure_voice
 
@@ -27,6 +28,7 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
         selection=get_selection_provider(),
         use_clipboard_fallback=cfg.use_clipboard_fallback,
     )
+    dictation = _make_dictation(cfg, service) if cfg.dictation_enabled else None
 
     def handle(req: ipc.Request) -> ipc.Response:
         cmd = req.get("cmd")
@@ -39,6 +41,15 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
         if cmd == "stop":
             service.stop()
             return {"ok": True}
+        if cmd == "skriv":  # til fejlfinding: skriv tekst ind i det aktive program
+            if dictation is None:
+                return {"ok": False, "fejl": "Diktering er slået fra i indstillingerne"}
+            dictation.insert_text(str(req.get("tekst", "")))
+            return {"ok": True}
+        if cmd == "dikter":
+            if dictation is None:
+                return {"ok": False, "fejl": "Diktering er slået fra i indstillingerne"}
+            return {"ok": True, "tilstand": dictation.toggle().value}
         if cmd == "afslut":
             # Samme vej som Ctrl+C, så både ikon- og baggrundstilstand lukker pænt
             threading.Timer(0.1, os.kill, (os.getpid(), signal.SIGTERM)).start()
@@ -54,7 +65,10 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
         # Kører i egen tråd: første gang venter KDE/GNOME på, at brugeren godkender.
         try:
             hk = get_hotkey_provider()
-            hk.start(cfg.hotkeys, lambda action: handle({"cmd": action}))
+            bindings = dict(cfg.hotkeys)
+            if dictation is None:
+                bindings.pop("dikter", None)
+            hk.start(bindings, lambda action: handle({"cmd": action}))
             hk_holder.append(hk)
             log.info("Globale genveje er aktive")
         except Exception as exc:  # noqa: BLE001 - genveje er valgfrie
@@ -68,7 +82,7 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
         threading.Thread(target=start_hotkeys, daemon=True, name="hotkey-setup").start()
 
     try:
-        if not (tray and _run_tray(service)):
+        if not (tray and _run_tray(service, dictation)):
             _wait_for_signal()
     finally:
         log.info("Lukker ned")
@@ -78,7 +92,37 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
         server.close()
 
 
-def _run_tray(service: ReadAloudService) -> bool:
+def _make_dictation(cfg: Config, service: ReadAloudService) -> DictationService | None:
+    try:
+        from ordhjaelp.audio.cues import Cues
+        from ordhjaelp.audio.recorder import Recorder
+        from ordhjaelp.stt.whisper_engine import WhisperEngine
+
+        engine = WhisperEngine(cfg.dictation_model, whisper_dir())
+        dictation = DictationService(
+            recorder=Recorder(),
+            transcriber=engine,
+            injector=get_text_injector(),
+            cues=Cues(),
+            before_recording=service.stop,
+            tell_user=service.say,
+        )
+    except Exception as exc:  # noqa: BLE001 - oplæsning skal virke, selv hvis diktering ikke gør
+        log.warning("Diktering er ikke tilgængelig: %s", exc)
+        return None
+    # Hent/indlæs modellen i baggrunden, så første diktering går hurtigt
+    threading.Thread(target=_preload, args=(engine,), daemon=True, name="whisper-load").start()
+    return dictation
+
+
+def _preload(engine) -> None:  # noqa: ANN001
+    try:
+        engine.preload()
+    except Exception:
+        log.exception("Kunne ikke indlæse talegenkendelse")
+
+
+def _run_tray(service: ReadAloudService, dictation: DictationService | None) -> bool:
     """Vis ikonet ved uret. Returnerer False, hvis det ikke kan lade sig gøre."""
     try:
         from ordhjaelp.ui.tray import TrayApp
@@ -89,7 +133,7 @@ def _run_tray(service: ReadAloudService) -> bool:
         log.warning("Skrivebordet har ikke noget område til ikoner ved uret")
         return False
     log.info("Ordhjælp kører. Markér tekst og klik på ikonet ved uret.")
-    TrayApp(service).run()
+    TrayApp(service, dictation).run()
     return True
 
 

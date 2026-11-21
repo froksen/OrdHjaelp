@@ -7,6 +7,10 @@ Senere også Windows og macOS.
 (eller tryk **Ctrl+Alt+L**). Teksten læses op med en naturlig dansk stemme.
 Mens der læses, er ikonet rødt – klik igen (eller **Ctrl+Alt+S**) for at stoppe.
 
+**Diktering:** Klik i et dokument, klik på det **grønne mikrofonikon** (eller **Ctrl+Alt+D**)
+og tal. Klik igen, når du er færdig – teksten skrives ind, hvor markøren står.
+Første gang spørger KDE, om Ordhjælp må bruge tastaturet.
+
 ## Kom i gang (Fedora/KDE)
 
 ```bash
@@ -18,7 +22,7 @@ uv run ordhjaelp installer --autostart       # menu + start ved login
 uv run ordhjaelp start                       # første gang: godkend genvejene i KDE-dialogen
 ```
 
-Stemmen (ca. 60 MB) hentes automatisk første gang.
+Stemmen (ca. 60 MB) og talegenkendelsen (ca. 250 MB) hentes automatisk første gang.
 
 ## Kommandoer
 
@@ -28,6 +32,8 @@ Stemmen (ca. 60 MB) hentes automatisk første gang.
 | `ordhjaelp afslut` | Lukker Ordhjælp helt |
 | `ordhjaelp laes` | Læser markeret tekst op – eller stopper, hvis der læses |
 | `ordhjaelp stop` | Stopper oplæsning |
+| `ordhjaelp dikter` | Starter/stopper diktering |
+| `ordhjaelp sammenlign-modeller` | Optag en sætning og se, hvad hver talemodel hører |
 | `ordhjaelp sig "tekst"` | Læser en tekst op |
 | `ordhjaelp status` | Viser om tjenesten kører |
 | `ordhjaelp installer [--autostart]` | Tilføjer til programmenuen (og autostart) |
@@ -42,6 +48,7 @@ Genvejene kan også ændres i *Systemindstillinger → Tastaturgenveje*.
 src/ordhjaelp/
 ├── services/       logik, uafhængig af styresystem (fx read_aloud.py)
 ├── tts/            Piper (oplæsning)
+├── stt/            Whisper (diktering) – kun færdige modeller fra Hugging Face
 ├── audio/          afspilning
 ├── platform/       ALT styresystem-specifikt
 │   ├── base.py     interfaces (SelectionProvider, HotkeyProvider)

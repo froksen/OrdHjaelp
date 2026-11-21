@@ -10,6 +10,7 @@ requires-python = ">=3.12,<3.14"
 license = "GPL-3.0-or-later"
 dependencies = [
     "dbus-fast>=5.2.0",
+    "faster-whisper>=1.2.1",
     "numpy>=2.5.5",
     "piper-tts>=1.8.0",
     "platformdirs>=4.14.8",
