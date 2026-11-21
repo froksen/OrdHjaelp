@@ -1,4 +1,8 @@
+import ctypes
 import os
+import re
+import shutil
+import subprocess
 
 import pytest
 
@@ -38,9 +42,28 @@ def _text_as_image(text: str) -> QImage:
     return image
 
 
+def _add_text(doc, index, text):
+    """Rigtig tekst med PDF'ens indbyggede Helvetica.
+
+    Ikke med Qt: på Windows tegner Qt teksten som streger, når den kører uden
+    skærm (offscreen), og så har siden ingen tekst, der kan udtrækkes.
+    """
+    raw = pdfium.raw
+    page = doc[index]
+    font = raw.FPDFText_LoadStandardFont(doc.raw, b"Helvetica")
+    obj = raw.FPDFPageObj_CreateTextObj(doc.raw, font, 14.0)
+    utf16 = ctypes.create_string_buffer((text + "\0").encode("utf-16-le"))
+    raw.FPDFText_SetText(obj, ctypes.cast(utf16, ctypes.POINTER(raw.FPDF_WCHAR)))
+    raw.FPDFPageObj_Transform(obj, 1, 0, 0, 1, 72, 700)
+    raw.FPDFPage_InsertObject(page.raw, obj)
+    raw.FPDFPage_GenerateContent(page.raw)
+    page.close()
+
+
 def make_pdf(path, pages):
     """pages: liste af ("scannet" | "tekst", tekst)."""
-    writer = QPdfWriter(str(path))
+    drawn = path.with_suffix(".qt.pdf")
+    writer = QPdfWriter(str(drawn))
     writer.setPageSize(QPageSize(QPageSize.PageSizeId.A4))
     writer.setResolution(150)
     painter = QPainter(writer)
@@ -49,12 +72,14 @@ def make_pdf(path, pages):
             writer.newPage()
         if kind == "scannet":
             painter.drawImage(50, 50, _text_as_image(text))
-        else:
-            font = QFont("DejaVu Sans")
-            font.setPointSize(14)
-            painter.setFont(font)
-            painter.drawText(100, 200, text)
     painter.end()
+    doc = pdfium.PdfDocument(str(drawn))
+    for i, (kind, text) in enumerate(pages):
+        if kind == "tekst":
+            _add_text(doc, i, text)
+    doc.save(str(path))
+    doc.close()
+    drawn.unlink()
     return path
 
 
@@ -150,6 +175,32 @@ def test_real_tesseract_finds_danish_text(app, tmp_path):
     assert "Hunden løb over græsset" in " ".join(texts[0].split())
     assert REAL_TEXT in texts[1]
     assert page_sizes(dst) == page_sizes(src)
+
+
+def _system_tessdata():
+    """Mappen med Tesseracts sprogmodeller (fra "tesseract --list-langs")."""
+    from ordhjaelp.ocr.tesseract import find_tesseract
+
+    out = subprocess.run(
+        [find_tesseract(), "--list-langs"], capture_output=True, text=True, check=False
+    )
+    match = re.search(r'"(.+?)"', out.stdout + out.stderr)
+    assert match, out
+    return match.group(1)
+
+
+def test_works_with_tessdata_without_configs(app, tmp_path, monkeypatch):
+    """Som Windows-installerens tessdata: kun sprogmodellen, ingen configs-mappe."""
+    from ordhjaelp.ocr import pdf
+
+    tessdata = tmp_path / "tessdata"
+    tessdata.mkdir()
+    shutil.copy(os.path.join(_system_tessdata(), "dan.traineddata"), tessdata)
+    monkeypatch.setattr(pdf, "_tessdata_args", lambda exe: ["--tessdata-dir", str(tessdata)])
+    src = make_pdf(tmp_path / "scan.pdf", [("scannet", SCANNED_TEXT)])
+    dst = tmp_path / "ud.pdf"
+    assert make_searchable(src, dst) == 1
+    assert "Hunden" in page_texts(dst)[0]
 
 
 def _run_job(job):
