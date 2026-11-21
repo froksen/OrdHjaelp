@@ -114,3 +114,36 @@ def test_read_at_pointer_checkbox_saves(app, hooks) -> None:
     d.accept()
     assert Config.from_toml((tmp / "config.toml").read_text()).read_at_pointer is True
     assert calls["restart"] == 1  # genvejene registreres ved start
+
+
+@pytest.mark.parametrize("small", [False, True])
+def test_no_label_is_clipped(app, hooks, small: bool) -> None:
+    """Al tekst skal kunne ses helt, også på en lille skærm (så skal der rulles).
+
+    Før blev en hjælpetekst klippet over, og "Talegenkendelse:" forsvandt, når vinduet
+    ikke kunne være på skærmen.
+    """
+    from PySide6.QtWidgets import QLabel
+
+    h, _calls, _tmp = hooks
+    d = SettingsDialog(h)
+    d.show()
+    if small:
+        d.resize(d.width(), 300)  # meget lavere end indholdet
+    app.processEvents()
+    try:
+        assert d.width() >= d.minimumSizeHint().width()
+        # Kun rullebjælke, når der ikke er plads
+        assert d._scroll.verticalScrollBar().isVisible() == small
+        for label in d.findChildren(QLabel):
+            assert not label.wordWrap(), f"brug faste linjeskift: {label.text()!r}"
+            if not label.isVisible() or not label.text():
+                continue
+            if label.wordWrap():
+                needed = label.heightForWidth(label.width())
+            else:
+                needed = label.sizeHint().height()
+                assert label.width() >= label.sizeHint().width(), label.text()
+            assert label.height() >= needed, f"klippet: {label.text()!r}"
+    finally:
+        d.close()
