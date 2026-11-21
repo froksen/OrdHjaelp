@@ -19,13 +19,14 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QRadioButton,
     QScrollArea,
     QSlider,
     QVBoxLayout,
     QWidget,
 )
 
-from ordhjaelp.config import Config, save_config
+from ordhjaelp.config import VIEW_TOOLBAR, VIEW_TRAY, Config, save_config
 from ordhjaelp.models.catalog import Kind, of_kind, size_text
 from ordhjaelp.models.store import ModelStore
 from ordhjaelp.platform.base import Autostart, TypingSetup
@@ -53,6 +54,7 @@ class SettingsHooks:
     models: ModelStore | None = None
     set_read_on_select: Callable[[bool], None] | None = None
     typing_setup: TypingSetup | None = None
+    set_view: Callable[[str], None] | None = None  # knaplinje eller ikoner ved uret
 
 
 def needs_restart(old: Config, new: Config) -> bool:
@@ -164,23 +166,36 @@ class SettingsDialog(QDialog):
         self._add_typing_status(col)
         layout.addWidget(box)
 
-        # -- Ikoner og start --------------------------------------------
-        box = QGroupBox("Ikoner ved uret")
+        # -- Knapper og start -------------------------------------------
+        box = QGroupBox("Knapper")
         col = QVBoxLayout(box)
+        self.view_toolbar = QRadioButton("En lille knaplinje på skærmen")
+        self.view_tray = QRadioButton("Et ikon for hver knap ved uret")
+        (self.view_tray if cfg.view == VIEW_TRAY else self.view_toolbar).setChecked(True)
+        col.addWidget(self.view_toolbar)
+        col.addWidget(self.view_tray)
+        info = QLabel(
+            "Knaplinjen kan flyttes, og den kan foldes ind med ‹.\n"
+            "Det blå ikon ved uret vises altid – her ligger også denne menu."
+        )
+        info.setStyleSheet("color: gray")
+        col.addWidget(info)
+        col.addWidget(QLabel("Vis disse knapper ud over læs op:"))
         self.icon_mic = QCheckBox("Mikrofon (diktering)")
         self.icon_mic.setChecked(cfg.show_icons.get("dikter", True))
         self.icon_screen = QCheckBox("Læs fra skærmen")
         self.icon_screen.setChecked(cfg.show_icons.get("skaerm", True))
         col.addWidget(self.icon_mic)
         col.addWidget(self.icon_screen)
-        info = QLabel("Det blå ikon (læs op) vises altid – her ligger også denne menu.")
-        info.setStyleSheet("color: gray")
-        col.addWidget(info)
         # Windows 11 gemmer nye ikoner under ^. Kun brugeren kan vælge at vise dem.
         self.tray_help = QPushButton("Vis ikonerne ved uret …")
         self.tray_help.setToolTip("Sådan bliver ikonerne synlige i stedet for gemt under ^")
         self.tray_help.clicked.connect(self._open_tray_help)
         self.tray_help.setVisible(sys.platform == "win32")
+        self.view_tray.toggled.connect(
+            lambda on: self.tray_help.setVisible(on and sys.platform == "win32")
+        )
+        self.tray_help.setVisible(self.view_tray.isChecked() and sys.platform == "win32")
         col.addWidget(self.tray_help, 0, Qt.AlignmentFlag.AlignLeft)
         layout.addWidget(box)
 
@@ -341,6 +356,7 @@ class SettingsDialog(QDialog):
         cfg.read_sentence_on_period = self.read_sentence.isChecked()
         cfg.show_icons["dikter"] = self.icon_mic.isChecked()
         cfg.show_icons["skaerm"] = self.icon_screen.isChecked()
+        cfg.view = VIEW_TRAY if self.view_tray.isChecked() else VIEW_TOOLBAR
         return cfg
 
     def accept(self) -> None:  # noqa: D102
@@ -350,6 +366,9 @@ class SettingsDialog(QDialog):
         hooks.set_clipboard_fallback(new.use_clipboard_fallback)
         if hooks.set_read_on_select is not None:
             hooks.set_read_on_select(new.read_on_select)
+        hooks.config.view = new.view  # set_icon_visible ser på den valgte visning
+        if hooks.set_view is not None and new.view != self._original.view:
+            hooks.set_view(new.view)
         for name in ("dikter", "skaerm"):
             hooks.set_icon_visible(name, new.show_icons[name])
         if hooks.autostart is not None and self.autostart.isEnabled():
