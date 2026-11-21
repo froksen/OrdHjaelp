@@ -13,7 +13,7 @@ Første gang spørger KDE, om Ordhjælp må bruge tastaturet.
 
 **Ordforslag:** Mens der skrives, vises forslag ved markøren – også ved lydret stavning
 ("sgole" → *skole*). **↓/↑** vælger (ordet læses op), **Tab** eller **mellemrum** tager det
-valgte, **F1–F5** eller klik vælger direkte. Uden valg bliver det skrevne stående.
+valgte, **F1–F5** eller klik vælger direkte, og **højreklik** læser et forslag op. Uden valg bliver det skrevne stående.
 Kræver IBus: *Systemindstillinger → Tastatur → Virtuelt tastatur → IBus Wayland*.
 Ord, eleven bruger, huskes lokalt (`~/.local/share/ordhjaelp/egne_ord.json`).
 

@@ -10,6 +10,7 @@ Betjening:
   ↓ / ↑          vælg forslag (det valgte læses op)
   Tab, mellemrum tag det valgte forslag (uden valg: det skrevne bliver stående)
   F1–F5 / klik   tag forslag nr. 1–5
+  højreklik      læs forslaget op uden at vælge det
   Esc            skjul forslagene
 """
 
@@ -28,6 +29,7 @@ from gi.repository import GLib, IBus  # noqa: E402
 
 ENGINE_NAME = "ordhjaelp"
 COMPONENT_NAME = "dk.ordhjaelp.IBus"
+MOUSE_RIGHT = 3
 PAGE_SIZE = 5
 MODIFIER_KEYS = {
     IBus.KEY_Shift_L,
@@ -151,8 +153,14 @@ class OrdhjaelpEngine(IBus.Engine):
 
     def do_candidate_clicked(self, index: int, button: int, state: int) -> None:
         position = self._table.get_cursor_pos() // PAGE_SIZE * PAGE_SIZE + index
-        if position < len(self._candidates):
-            self._commit_word(self._candidates[position])
+        if position >= len(self._candidates):
+            return
+        candidate = self._candidates[position]
+        if button == MOUSE_RIGHT:
+            # Højreklik: hør ordet uden at vælge det (IBus-panelet melder ikke "mus over")
+            tell({"cmd": "sig", "tekst": candidate})
+        else:
+            self._commit_word(candidate)
 
     def do_focus_out(self) -> None:
         self._commit_word()
