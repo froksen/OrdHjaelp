@@ -116,8 +116,24 @@ def test_read_at_pointer_checkbox_saves(app, hooks) -> None:
     assert calls["restart"] == 1  # genvejene registreres ved start
 
 
+class _ReadySetup:
+    """Opsætningen til ordforslag er i orden, så statuslinjen vises."""
+
+    def checks(self):
+        from ordhjaelp.platform.base import SetupCheck
+
+        return [SetupCheck("IBus", True, "")]
+
+    def guide(self):
+        return []
+
+    def open_settings(self):
+        return False
+
+
+@pytest.mark.parametrize("typing", [False, True])
 @pytest.mark.parametrize("small", [False, True])
-def test_no_label_is_clipped(app, hooks, small: bool) -> None:
+def test_no_label_is_clipped(app, hooks, small: bool, typing: bool) -> None:
     """Al tekst skal kunne ses helt, også på en lille skærm (så skal der rulles).
 
     Før blev en hjælpetekst klippet over, og "Talegenkendelse:" forsvandt, når vinduet
@@ -126,6 +142,9 @@ def test_no_label_is_clipped(app, hooks, small: bool) -> None:
     from PySide6.QtWidgets import QLabel
 
     h, _calls, _tmp = hooks
+    if typing:
+        h.typing_setup = _ReadySetup()
+        h.config.prediction_enabled = True
     d = SettingsDialog(h)
     d.show()
     if small:
@@ -133,8 +152,11 @@ def test_no_label_is_clipped(app, hooks, small: bool) -> None:
     app.processEvents()
     try:
         assert d.width() >= d.minimumSizeHint().width()
-        # Kun rullebjælke, når der ikke er plads
-        assert d._scroll.verticalScrollBar().isVisible() == small
+        # Kun rullebjælke, når der ikke er plads. Om indholdet kan være på testskærmen
+        # (800 px) afhænger af skrifttypen: Noto Sans på Fedora er højere end Ubuntus.
+        no_room = d._scroll.viewport().height() < d._content.sizeHint().height()
+        assert no_room or not small
+        assert d._scroll.verticalScrollBar().isVisible() == no_room
         for label in d.findChildren(QLabel):
             assert not label.wordWrap(), f"brug faste linjeskift: {label.text()!r}"
             if not label.isVisible() or not label.text():
