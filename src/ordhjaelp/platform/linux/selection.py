@@ -7,10 +7,15 @@ Problem: Programmer (Chrome, LibreOffice …) og KDE's Klipper bliver ved med at
 udbyde den sidst markerede tekst, selv efter markeringen er fjernet på skærmen.
 Løsning: Vi holder øje med, hvornår markeringen *ændrer sig*. Tekst, der allerede
 er læst op, og som ikke er blevet markeret igen siden, regnes for gammel.
+
+LibreOffice på Wayland udbyder en tom markering, når man markerer ved at trække
+med musen (kun dobbeltklik på et ord virker). Er markeringen tom, spørger vi
+derfor det aktive vindue direkte via AT-SPI (tilgængeligheds-API'et).
 """
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import ctypes
 import logging
@@ -31,6 +36,7 @@ __all__ = ["FreshnessTracker", "LinuxSelection"]
 _TIMEOUT = 2.0
 _STARTUP_GRACE = 1.0  # sekunder efter start, hvor meldinger om markeringen ignoreres
 _X11_POLL_INTERVAL = 0.5  # X11 kan ikke melde ændringer, så vi kigger efter to gange i sekundet
+_ATSPI_TIMEOUT = 1.5  # sekunder; et program, der ikke svarer, må ikke få oplæsningen til at hænge
 
 
 def _session_type() -> str:
@@ -63,6 +69,52 @@ def _run(cmds: list[list[str]]) -> str | None:
         text = result.stdout.decode("utf-8", errors="replace").strip()
         return text or None
     return None
+
+
+def _atspi_selection() -> str | None:
+    """Den markerede tekst i det aktive vindue via AT-SPI, eller None."""
+    try:
+        from ordhjaelp.platform.linux import atspi
+    except ImportError:  # dbus-fast mangler
+        return None
+
+    async def lookup() -> str | None:
+        bus = await atspi.connect()
+        try:
+            api = atspi.Atspi(bus)
+            frame = await api.active_frame()
+            if frame is None:
+                log.info("AT-SPI: intet aktivt vindue")
+                return None
+            text = await api.selected_text(frame)
+            log.info("AT-SPI: %d tegn markeret i %r", len(text), await api.name(frame))
+            return text
+        finally:
+            bus.disconnect()
+
+    # Egen tråd: genvejene kalder os fra en tråd, hvor der allerede kører en asyncio-løkke
+    result: list[str | None] = []
+
+    def work() -> None:
+        try:
+            result.append(asyncio.run(asyncio.wait_for(lookup(), _ATSPI_TIMEOUT)))
+        except Exception as exc:  # noqa: BLE001 - reserveløsning; må aldrig vælte oplæsningen
+            log.info("AT-SPI kunne ikke finde en markering: %s", exc)
+
+    thread = threading.Thread(target=work, daemon=True, name="atspi-selection")
+    thread.start()
+    thread.join(_ATSPI_TIMEOUT + 0.5)
+    text = result[0] if result else None
+    return text.strip() if text and text.strip() else None
+
+
+def _enable_accessibility() -> None:
+    try:
+        from ordhjaelp.platform.linux import atspi
+
+        asyncio.run(atspi.enable_accessibility())
+    except Exception as exc:  # noqa: BLE001
+        log.debug("Kunne ikke slå tilgængelighed til: %s", exc)
 
 
 def _die_with_parent() -> None:
@@ -142,6 +194,8 @@ class LinuxSelection:
                 self._watcher = _SelectionWatcher()
             except OSError as exc:
                 log.warning("Kan ikke overvåge markeringer: %s", exc)
+        # Programmerne skal have tilgængelighed slået til, før AT-SPI kan se markeringen
+        threading.Thread(target=_enable_accessibility, daemon=True, name="atspi-enable").start()
 
     def _serial(self) -> int | None:
         if self._watcher and self._watcher.alive:
@@ -149,7 +203,12 @@ class LinuxSelection:
         return None
 
     def selected_text(self) -> str | None:
-        return self._primary.fresh(_run(_commands(primary=True)), self._serial())
+        primary = _run(_commands(primary=True))
+        if primary:
+            return self._primary.fresh(primary, self._serial())
+        # Tom markering: spørg vinduet selv. AT-SPI viser kun det, der er markeret
+        # lige nu, så her er ingen gammel markering at sortere fra.
+        return _atspi_selection()
 
     def on_change(self, callback: Callable[[], None]) -> bool:
         if self._watcher and self._watcher.alive:

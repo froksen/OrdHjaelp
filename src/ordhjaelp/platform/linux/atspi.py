@@ -9,6 +9,7 @@ Spec: https://gnome.pages.gitlab.gnome.org/at-spi2-core/devel-docs/
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from dataclasses import dataclass
 
@@ -33,6 +34,9 @@ STATE_SHOWING = 25
 
 MAX_DEPTH = 60
 MAX_SIBLINGS = 200
+
+# Dele af et vindue, hvor der aldrig er markeret tekst, man vil have læst op
+_SKIP_ROLES = {"menu bar", "menu", "popup menu", "tool bar", "status bar", "scroll bar", "ruler"}
 
 
 class AtspiError(RuntimeError):
@@ -275,6 +279,59 @@ class Atspi:
             following = await self._following_texts(candidate) if with_following else ()
             return TextHit(_clean(text), min(offset, max(len(text) - 1, 0)), following)
         return None
+
+    # -- den markerede tekst ----------------------------------------------
+    async def active_frame(self) -> Ref | None:
+        """Det aktive vindue (det, brugeren arbejder i)."""
+        for app in await self.applications():
+            for frame in await self.frames(app):
+                if _has_state(await self._safe_states(frame), STATE_ACTIVE):
+                    return frame
+        return None
+
+    async def selected_text(self, frame: Ref) -> str:
+        """Den markerede tekst i vinduet – også når den går over flere afsnit.
+
+        Kun synlige dele af vinduet gennemsøges, og menuer og værktøjslinjer
+        springes over. Søskende spørges samtidig, så det går hurtigt.
+        """
+        return "\n".join(await self._selections_below(frame, 0))
+
+    async def _selections_below(self, ref: Ref, depth: int) -> list[str]:
+        try:
+            (role,), states, names = await asyncio.gather(
+                self._call(ref, ACCESSIBLE, "GetRoleName"), self.states(ref), self.interfaces(ref)
+            )
+        except AtspiError:
+            return []
+        if role in _SKIP_ROLES or not _has_state(states, STATE_SHOWING) or depth > MAX_DEPTH:
+            return []
+        found: list[str] = []
+        if TEXT in names:
+            found.extend(await self._own_selections(ref))
+        try:
+            children = await self.children(ref)
+        except AtspiError:
+            return found
+        below = await asyncio.gather(
+            *(self._selections_below(child, depth + 1) for child in children[:MAX_SIBLINGS])
+        )
+        for texts in below:  # i samme rækkefølge som i dokumentet
+            found.extend(texts)
+        return found
+
+    async def _own_selections(self, ref: Ref) -> list[str]:
+        try:
+            (count,) = await self._call(ref, TEXT, "GetNSelections")
+            texts = []
+            for i in range(count):
+                start, end = await self._call(ref, TEXT, "GetSelection", "i", [i])
+                if end > start:
+                    (text,) = await self._call(ref, TEXT, "GetText", "ii", [start, end])
+                    texts.append(_clean(str(text)))
+            return texts
+        except AtspiError:
+            return []
 
     async def _following_texts(self, ref: Ref) -> tuple[str, ...]:
         """Teksten i de næste afsnit (søskende med tekst), til "læs herfra"."""

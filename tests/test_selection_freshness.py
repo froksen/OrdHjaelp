@@ -55,3 +55,29 @@ def test_x11_poller_reports_only_new_selections(monkeypatch) -> None:
     assert changed.wait(1)
     threading.Event().wait(0.1)
     assert calls == [1]  # kun "nyt ord" er en ændring
+
+
+def _selection_without_watcher(monkeypatch, primary: str | None):  # noqa: ANN202
+    from ordhjaelp.platform.linux import selection as sel
+
+    monkeypatch.setattr(sel, "_session_type", lambda: "x11")  # ingen wl-paste --watch
+    monkeypatch.setattr(sel, "_enable_accessibility", lambda: None)
+    monkeypatch.setattr(sel, "_run", lambda cmds: primary)
+    return sel, sel.LinuxSelection()
+
+
+def test_empty_primary_falls_back_to_atspi(monkeypatch) -> None:
+    # LibreOffice på Wayland: en sætning markeret med musen giver en tom markering
+    sel, s = _selection_without_watcher(monkeypatch, None)
+    monkeypatch.setattr(sel, "_atspi_selection", lambda: "Hej med dig")
+    assert s.selected_text() == "Hej med dig"
+
+
+def test_atspi_not_asked_when_primary_has_text(monkeypatch) -> None:
+    sel, s = _selection_without_watcher(monkeypatch, "hej")
+
+    def fail() -> str:
+        raise AssertionError("AT-SPI skal ikke spørges")
+
+    monkeypatch.setattr(sel, "_atspi_selection", fail)
+    assert s.selected_text() == "hej"
