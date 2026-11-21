@@ -65,10 +65,19 @@ og Windows. Alt styresystemspecifikt ligger i `src/ordhjaelp/platform/`.
   xdotool, dbus-launch og at-spi2-core. Kør med `ORDHJAELP_ATSPI_TEST=1`.
 
 ### Brugerflade (Qt)
-- En `QLabel` med `setWordWrap(True)` i en `QFormLayout` får ikke nok højde, så teksten
-  klippes over. Brug faste linjeskift (`\n`). `test_no_label_is_clipped` fanger det.
-- Tag et skærmbillede af vinduer, der ændres (offscreen, `QT_SCALE_FACTOR=2`,
-  `widget.grab()`), og se på det. Fejlen ovenfor blev kun fundet sådan.
+- **Brug aldrig `QLabel.setWordWrap(True)`** i indstillingsvinduet. Qt gætter så vinduets
+  bredde ud fra højden og gør det smallere end minimumsbredden. Med en bred skrifttype
+  (DejaVu, Noto Sans på KDE) forsvandt "Talegenkendelse:", og tekst blev klippet. Brug
+  faste linjeskift (`\n`). `test_no_label_is_clipped` fanger det.
+- **Test med en bred skrifttype.** Fejlen sås ikke med Inter, men kun med DejaVu (som
+  GitHubs Ubuntu bruger). Kør med en fontconfig, der kun kender DejaVu:
+  `FONTCONFIG_FILE=<fil med <dir>…/DejaVuSans.ttf</dir>> QT_QPA_PLATFORM=offscreen ...`
+- **Små skærme:** skole-pc'er har ofte 1366x768 med 125 %, altså cirka 614 punkter i
+  højden. Indstillingerne ligger derfor i et rulleområde. Afprøv med
+  `QT_QPA_PLATFORM="offscreen:configfile=skaerm.json"` med en skærm på 1093x614.
+- **Tag skærmbilleder** af vinduer, der ændres, og se på dem. Rendér med
+  `widget.render(QImage)` med `setDevicePixelRatio(2)`. Brug ikke `QT_SCALE_FACTOR=2`, for
+  det halverer den virtuelle skærm og klemmer vinduet.
 
 ### Testmiljø (Linux-container)
 - Qt-testene kræver `libegl1 libgl1 libxkbcommon0 libfontconfig1`, og lydtestene
