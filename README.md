@@ -229,7 +229,7 @@ Ordhjælp er under udvikling og afprøves på Fedora KDE Plasma (Wayland).
 - [x] Læs op, diktering, læs fra skærmen
 - [x] Ordforslag med fonetisk matching, læs mens du skriver
 - [x] Indstillinger, autostart, RPM
-- [ ] Synlig besked ved første start, mens modellerne hentes
+- [x] Velkomstvindue ved første start: vælg og hent sprogmodeller; administrér dem i indstillingerne
 - [x] Windows: læs op, diktering, læs fra skærmen, genveje, autostart (prøveudgave)
 - [ ] Windows: ordforslag, læs ved markering, læs under musen, installer
 - [ ] macOS
