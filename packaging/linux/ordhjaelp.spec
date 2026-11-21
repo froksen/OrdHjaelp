@@ -30,6 +30,9 @@ Requires:       xdg-desktop-portal
 # Læs under musen: tilgængelighedsbussen (Wayland og X11) og musens position på X11
 Requires:       at-spi2-core
 Recommends:     xdotool
+# Hjælp til opsætning af ordforslag på KDE: læs valgt virtuelt tastatur, åbn indstillingssiden
+Recommends:     kf6-kconfig
+Recommends:     kf6-kcmutils
 
 %description
 Ordhjælp er et gratis læse- og skriveværktøj (LST) til danske elever.
@@ -51,3 +54,15 @@ cp -a %{stage}/. %{buildroot}/
 
 %postun
 /usr/bin/gtk-update-icon-cache -q %{_datadir}/icons/hicolor &>/dev/null || :
+
+%changelog
+* Sat Nov 21 2026 Ole Frandsen - 0.2.0-1
+- Hjælp til opsætning af ordforslag: vejledning og statustjek i indstillingerne
+- Læs ordet/sætningen op mens du skriver virker nu også uden ordforslag
+- Markeret tekst i LibreOffice Writer på Wayland læses via AT-SPI
+- Læs ved markering og læs under musen (bidrag fra qvisty)
+- Velkomstvindue: vælg og hent sprogmodeller; administration i indstillingerne
+- Første udgave af Windows-understøttelse (bidrag fra qvisty)
+
+* Sat Nov 21 2026 Ole Frandsen - 0.1.0-1
+- Første udgave

@@ -1,6 +1,6 @@
 [project]
 name = "ordhjaelp"
-version = "0.1.0"
+version = "0.2.0"
 description = "Dansk læse- og skrivehjælp (LST) – oplæsning, diktering og ordforslag"
 readme = "README.md"
 authors = [
