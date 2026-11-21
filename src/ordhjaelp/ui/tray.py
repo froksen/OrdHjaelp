@@ -16,7 +16,8 @@ from PySide6.QtCore import QObject, QTimer, Signal
 from PySide6.QtGui import QAction, QIcon
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
-from ordhjaelp.config import APP_ID
+from ordhjaelp import config
+from ordhjaelp.config import APP_ID, VIEW_TOOLBAR, VIEW_TRAY
 from ordhjaelp.services.dictation import DictationService, DictationState
 from ordhjaelp.services.read_aloud import ReadAloudService
 from ordhjaelp.services.screen_read import ScreenReadService
@@ -112,11 +113,16 @@ class TrayApp:
             act_tray_help = QAction("Vis ikonerne ved uret …", menu)
             act_tray_help.triggered.connect(self.open_tray_help)
             menu.addAction(act_tray_help)
+        self._act_toolbar = QAction("Vis knaplinjen", menu)
+        self._act_toolbar.triggered.connect(self.show_toolbar)
+        menu.addAction(self._act_toolbar)
         self._settings = settings
         self._settings_dialog = None
         self._shortcuts_dialog = None
+        self._view = settings.config.view if settings is not None else VIEW_TOOLBAR
         if settings is not None:
             settings.set_icon_visible = self.set_icon_visible
+            settings.set_view = self.set_view
             settings.set_pdf_ocr = self._act_pdf.setVisible
             act_settings = QAction("Indstillinger …", menu)
             act_settings.triggered.connect(self.open_settings)
@@ -176,6 +182,35 @@ class TrayApp:
                 # Genvejen kommer fra en baggrundstråd – send den via Qt-signal
                 ui_actions["skaerm"] = self._bridge.screen_requested.emit
 
+        self._build_toolbar(hotkeys)
+
+    def _build_toolbar(self, hotkeys: dict[str, str] | None) -> None:
+        """Knaplinjen med de samme funktioner som ikonerne ved uret."""
+        from ordhjaelp.ui.toolbar import Toolbar, tooltip_with_key
+
+        bar = Toolbar(self._icon_idle, self._menu, config.config_dir() / "knaplinje.json")
+        self._read_tip = tooltip_with_key("Læs markeret tekst op", hotkeys, "laes")
+        self._stop_tip = tooltip_with_key("Stop oplæsningen", hotkeys, "stop")
+        bar.add_button("laes", self._icon_idle, self._read_tip, self._service.toggle)
+        if self.mic is not None:
+            self._mic_tips = {
+                st: tooltip_with_key(tip, hotkeys, "dikter") for st, tip in MIC_TOOLTIPS.items()
+            }
+            bar.add_button(
+                "dikter",
+                self._mic_icons[DictationState.IDLE],
+                self._mic_tips[DictationState.IDLE],
+                self._dictation.toggle,
+            )
+        if self.screen_icon is not None:
+            self._screen_tip = tooltip_with_key(
+                "Læs fra skærmen – træk en firkant om teksten", hotkeys, "skaerm"
+            )
+            bar.add_button(
+                "skaerm", self._screen_icons[False], self._screen_tip, self.start_screen_read
+            )
+        self.toolbar = bar
+
     @staticmethod
     def available() -> bool:
         if QApplication.instance() is None:
@@ -184,12 +219,8 @@ class TrayApp:
 
     def run(self, on_started: Callable[[], None] | None = None) -> int:
         self.tray.show()
-        icons = self._settings.config.show_icons if self._settings else {}
-        if self.mic:
-            self.mic.setVisible(icons.get("dikter", True))
-        if self.screen_icon:
-            self.screen_icon.setVisible(icons.get("skaerm", True))
-        if sys.platform == "win32":
+        self.set_view(self._view)
+        if sys.platform == "win32" and self._view == VIEW_TRAY:  # knaplinjen er ikke gemt
             QTimer.singleShot(3000, self._first_run_tray_tip)
         # Lad Ctrl+C/SIGTERM lukke pænt: Python ser kun signaler, når den får lov at køre.
         signal.signal(signal.SIGINT, lambda *_: self.app.quit())
@@ -275,9 +306,38 @@ class TrayApp:
         job.start()
 
     def set_icon_visible(self, name: str, visible: bool) -> None:
+        if self._settings is not None:
+            self._settings.config.show_icons[name] = visible
         icon = {"dikter": self.mic, "skaerm": self.screen_icon}.get(name)
         if icon is not None:
-            icon.setVisible(visible)
+            icon.setVisible(visible and self._view == VIEW_TRAY)
+        self.toolbar.set_button_visible(name, visible)
+
+    # -- knaplinje eller ikoner ved uret ----------------------------------
+    def set_view(self, view: str) -> None:
+        """Skift mellem knaplinjen og ikonerne ved uret (uden genstart).
+
+        Det blå ikon ved uret vises altid: det har menuen med indstillinger.
+        """
+        self._view = view
+        icons = self._settings.config.show_icons if self._settings else {}
+        for name, icon in (("dikter", self.mic), ("skaerm", self.screen_icon)):
+            if icon is not None:
+                icon.setVisible(view == VIEW_TRAY and icons.get(name, True))
+            self.toolbar.set_button_visible(name, icons.get(name, True))
+        self._act_toolbar.setVisible(view == VIEW_TOOLBAR)
+        if view == VIEW_TOOLBAR:
+            if not self.toolbar.isVisible():
+                self.toolbar.show_at_saved_place()
+        else:
+            self.toolbar.hide()
+
+    def show_toolbar(self) -> None:
+        """Vis knaplinjen foldet ud (menuen ved uret), fx hvis eleven har mistet den."""
+        if not self.toolbar.isVisible():
+            self.toolbar.show_at_saved_place()
+        self.toolbar.set_folded(False)
+        self.toolbar.raise_()
 
     # -- læs fra skærmen -----------------------------------------------
     def _on_screen_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:
@@ -325,6 +385,8 @@ class TrayApp:
         self._screen_busy = busy
         if self.screen_icon:
             self.screen_icon.setIcon(self._screen_icons[busy])
+            tip = "Læser teksten på skærmen …" if busy else self._screen_tip
+            self.toolbar.set_button("skaerm", self._screen_icons[busy], tip)
 
     def _on_mic_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:
         if reason == QSystemTrayIcon.ActivationReason.Trigger:
@@ -334,8 +396,14 @@ class TrayApp:
         assert self.mic is not None
         self.mic.setIcon(self._mic_icons[state])
         self.mic.setToolTip(MIC_TOOLTIPS[state])
+        self.toolbar.set_button("dikter", self._mic_icons[state], self._mic_tips[state])
 
     def _set_speaking(self, speaking: bool) -> None:
         self.tray.setIcon(self._icon_stop if speaking else self._icon_idle)
         self.tray.setToolTip(TOOLTIP_SPEAKING if speaking else self._tooltip_idle)
         self._act_stop.setEnabled(speaking)
+        self.toolbar.set_button(
+            "laes",
+            self._icon_stop if speaking else self._icon_idle,
+            self._stop_tip if speaking else self._read_tip,
+        )

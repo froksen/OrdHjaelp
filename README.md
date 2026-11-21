@@ -18,18 +18,27 @@ til Windows og macOS.
 
 - **Gratis og open source** (GPL-3.0)
 - **Offline:** stemme, talegenkendelse og ordforslag kører på computeren – intet sendes ud
-- **Enkelt:** tre ikoner ved uret, ét klik pr. funktion. Indstillinger er gemt væk til voksne
+- **Enkelt:** en lille knaplinje på skærmen (eller ikoner ved uret), ét klik pr. funktion.
+  Indstillinger er gemt væk til voksne
 
 ## Funktioner
 
 | | Funktion | Sådan |
 |---|---|---|
-| 🔊 | **Læs op** | Markér tekst hvor som helst, og klik på det **blå ikon** (eller **Ctrl+Alt+L**). Klik igen for at stoppe |
-| 🎤 | **Diktering** | Klik i et dokument, klik på det **grønne ikon** (eller **Ctrl+Alt+D**), og tal. Klik igen – teksten skrives ind, hvor markøren står |
-| ⬚ | **Læs fra skærmen** | Klik på det **lilla ikon** (eller **Ctrl+Alt+B**), og træk en firkant om tekst i et billede, en PDF eller et spil |
+| 🔊 | **Læs op** | Markér tekst hvor som helst, og klik på den **blå knap** (eller **Ctrl+Alt+L**). Klik igen for at stoppe |
+| 🎤 | **Diktering** | Klik i et dokument, klik på den **grønne knap** (eller **Ctrl+Alt+D**), og tal. Klik igen – teksten skrives ind, hvor markøren står |
+| ⬚ | **Læs fra skærmen** | Klik på den **lilla knap** (eller **Ctrl+Alt+B**), og træk en firkant om tekst i et billede, en PDF eller et spil |
 | ✍️ | **Ordforslag** | Forslag ved markøren, mens der skrives – også ved lydret stavning |
 | 🖱️ | **Læs under musen** | Peg med musen og tryk **Ctrl+Alt+1** (ordet), **Ctrl+Alt+2** (sætningen) eller **Ctrl+Alt+3** (herfra og videre). Slås til i indstillingerne |
 | 🗣️ | **Læs mens du skriver** | Ordet læses op ved mellemrum og/eller sætningen ved punktum (slås til i indstillingerne) |
+
+### Knaplinjen
+
+Knapperne ligger i en lille knaplinje nederst til højre på skærmen. Træk i prikkerne (⠿)
+for at flytte den, og klik på **‹** for at folde den ind til en lille fane. Ordhjælp husker,
+hvor linjen lå (dog ikke på Wayland, hvor skrivebordet selv vælger pladsen). Under
+**⋯** ligger indstillinger, genveje og Luk. Foretrækker man et ikon for hver funktion
+ved uret, vælges det i indstillingerne under **Knapper**.
 | 🖱️ | **Læs ved markering** | Dobbeltklik på et ord, og det læses op. Trippelklik læser linjen eller afsnittet (slås til i indstillingerne) |
 | 📄 | **Gør en PDF søgbar** | Højreklik på det **blå ikon** → **Gør en PDF søgbar**, og vælg en scannet PDF. Der kommer en kopi, hvor teksten kan markeres og læses op (slås til i indstillingerne) |
 
@@ -80,8 +89,8 @@ usynligt tekstlag oven på siderne. Siderne ser ud som før.
 
 ### Indstillinger
 
-Højreklik på det blå ikon → **Indstillinger**: taletempo (med "Prøv stemmen"),
-læs ved markering, diktering og talemodel, ordforslag, læs mens du skriver, hvilke ikoner der vises, og
+Klik på **⋯** i knaplinjen eller højreklik på det blå ikon ved uret → **Indstillinger**: taletempo (med "Prøv stemmen"),
+læs ved markering, diktering og talemodel, ordforslag, læs mens du skriver, knaplinje eller ikoner ved uret, hvilke knapper der vises, og
 autostart ved login. Indstillingerne gemmes i `~/.config/ordhjaelp/config.toml`.
 
 ## Installation (Fedora KDE og GNOME)

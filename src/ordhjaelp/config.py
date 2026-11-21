@@ -15,6 +15,11 @@ from platformdirs import user_config_dir, user_data_dir
 APP_NAME = "ordhjaelp"
 APP_ID = "dk.ordhjaelp.Ordhjaelp"
 
+# Hvor knapperne vises: en lille knaplinje på skærmen eller ikoner ved uret
+VIEW_TOOLBAR = "knaplinje"
+VIEW_TRAY = "ikoner"
+VIEWS = (VIEW_TOOLBAR, VIEW_TRAY)
+
 
 def config_dir() -> Path:
     return Path(user_config_dir(APP_NAME))
@@ -66,6 +71,7 @@ class Config:
     )
     # Hvilke ikoner der vises ved uret (læs op-ikonet vises altid – det har menuen)
     show_icons: dict[str, bool] = field(default_factory=lambda: {"dikter": True, "skaerm": True})
+    view: str = VIEW_TOOLBAR
 
     @property
     def typing_help_enabled(self) -> bool:
@@ -98,6 +104,8 @@ class Config:
         icons = dict(raw.get("ikoner", {}))
         icons.pop("altid_synlige", None)  # fra version 0.2 (virkede ikke), er ikke et ikon
         cfg.show_icons.update({str(k): bool(v) for k, v in icons.items()})
+        view = str(raw.get("visning", {}).get("knapper", cfg.view))
+        cfg.view = view if view in VIEWS else VIEW_TOOLBAR
         return cfg
 
     def to_toml(self) -> str:
@@ -144,13 +152,18 @@ model = {s(self.dictation_model)}
 # Forslag mens der skrives (på Linux kræver det IBus – se README)
 aktiv = {b(self.prediction_enabled)}
 
+[visning]
+# Hvor knapperne vises: "knaplinje" (en lille linje på skærmen, standard)
+# eller "ikoner" (et ikon for hver funktion ved uret)
+knapper = {s(self.view)}
+
 [pdf]
-# "Gør en PDF søgbar" i menuen ved det blå ikon: teksten i en scannet PDF
+# "Gør en PDF søgbar" i menuen (⋯ i knaplinjen og det blå ikon): teksten i en scannet PDF
 # bliver til rigtig tekst, så den kan markeres og læses op.
 soegbar = {b(self.pdf_ocr_enabled)}
 
 [ikoner]
-# Vis ikoner ved uret (dikter = mikrofon, skaerm = læs fra skærmen)
+# Hvilke knapper der vises (dikter = mikrofon, skaerm = læs fra skærmen)
 {icons}
 
 [genveje]
