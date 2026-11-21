@@ -13,6 +13,7 @@ from ordhjaelp.platform.base import (
     ScreenCapture,
     SelectionProvider,
     TextInjector,
+    TypingSetup,
 )
 
 
@@ -92,8 +93,18 @@ def get_input_method() -> InputMethod:
     raise PlatformNotSupported(f"Ordforslag understøttes endnu ikke på {sys.platform}")
 
 
+def get_typing_setup() -> TypingSetup | None:
+    """Opsætningstjek til ordforslag og læs mens du skriver (None, hvor det ikke findes)."""
+    if sys.platform.startswith("linux"):
+        from ordhjaelp.platform.linux.ibus import IBusSetup
+
+        return IBusSetup()
+    return None
+
+
 __all__ = [
     "get_input_method",
+    "get_typing_setup",
     "get_autostart",
     "get_hotkey_provider",
     "get_pointer_text",

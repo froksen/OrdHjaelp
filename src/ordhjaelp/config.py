@@ -66,6 +66,11 @@ class Config:
     # Hvilke ikoner der vises ved uret (læs op-ikonet vises altid – det har menuen)
     show_icons: dict[str, bool] = field(default_factory=lambda: {"dikter": True, "skaerm": True})
 
+    @property
+    def typing_help_enabled(self) -> bool:
+        """Ordforslag eller læs mens du skriver – begge kræver indtastningsmetoden (IBus)."""
+        return self.prediction_enabled or self.read_word_on_space or self.read_sentence_on_period
+
     @classmethod
     def from_toml(cls, text: str) -> Config:
         raw = tomllib.loads(text)

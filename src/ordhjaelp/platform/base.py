@@ -7,6 +7,7 @@ platform/linux, platform/windows og platform/macos.
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Protocol
 
 
@@ -84,3 +85,28 @@ class Autostart(Protocol):
 
 class PlatformNotSupported(RuntimeError):
     pass
+
+
+@dataclass(frozen=True)
+class SetupCheck:
+    """Ét punkt i et opsætningstjek, fx "IBus er valgt som virtuelt tastatur"."""
+
+    label: str
+    ok: bool
+    fix: str = ""  # hvad brugeren skal gøre, hvis punktet ikke er i orden
+
+
+class TypingSetup(Protocol):
+    """Opsætningen af styresystemet, som ordforslag og læs mens du skriver kræver."""
+
+    def checks(self) -> list[SetupCheck]:
+        """Tjek opsætningen nu. Hurtigt nok til at kalde fra brugerfladen."""
+        ...
+
+    def guide(self) -> list[str]:
+        """Trinene i vejledningen, i den rækkefølge de skal gøres."""
+        ...
+
+    def open_settings(self) -> bool:
+        """Åbn systemets indstillinger på det rette sted. False, hvis det ikke kan lade sig gøre."""
+        ...

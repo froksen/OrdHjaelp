@@ -6,17 +6,22 @@ Systemindstillinger → Tastatur → Virtuelt tastatur → "IBus Wayland".
 
 from __future__ import annotations
 
+import functools
 import logging
+import os
 import shutil
 import subprocess
 import threading
 from importlib.resources import as_file, files
 
-from ordhjaelp.platform.linux.selection import _die_with_parent
+from ordhjaelp.platform.base import SetupCheck
+from ordhjaelp.platform.linux.selection import _die_with_parent, _session_type
 
 log = logging.getLogger(__name__)
 
 SYSTEM_PYTHON = "/usr/bin/python3"  # har IBus-bindingerne (python3-gobject)
+ENGINE_NAME = "ordhjaelp"  # samme navn som i ibus_engine.py
+KDE_KEYBOARD_KCM = "kcm_virtualkeyboard"  # Systemindstillinger → Tastatur → Virtuelt tastatur
 
 
 def ibus_running() -> bool:
@@ -78,3 +83,118 @@ class IBusInputMethod:
         if self._script_ctx is not None:
             self._script_ctx.__exit__(None, None, None)
             self._script_ctx = None
+
+
+# -- opsætningstjek og vejledning ---------------------------------------------
+
+
+def _is_kde_wayland() -> bool:
+    return "KDE" in os.environ.get("XDG_CURRENT_DESKTOP", "") and _session_type() == "wayland"
+
+
+@functools.cache
+def _ibus_installed() -> bool:
+    """IBus og de Python-bindinger, som Ordhjælps motor kører med. Ændrer sig ikke undervejs."""
+    if shutil.which("ibus") is None:
+        return False
+    probe = "import gi; gi.require_version('IBus', '1.0'); from gi.repository import IBus"
+    try:
+        result = subprocess.run([SYSTEM_PYTHON, "-c", probe], capture_output=True, timeout=5)
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return result.returncode == 0
+
+
+def _kwin_input_method() -> str:
+    """Det virtuelle tastatur, der er valgt i KDE (tom tekst, hvis intet er valgt)."""
+    if shutil.which("kreadconfig6") is None:
+        return ""
+    try:
+        result = subprocess.run(
+            ["kreadconfig6", "--file", "kwinrc", "--group", "Wayland", "--key", "InputMethod"],
+            capture_output=True,
+            text=True,
+            timeout=3,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+    return result.stdout.strip()
+
+
+def _current_engine() -> str:
+    try:
+        result = subprocess.run(
+            ["ibus", "engine"], capture_output=True, text=True, timeout=3, check=False
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+    return result.stdout.strip() if result.returncode == 0 else ""
+
+
+class IBusSetup:
+    """Tjekker, om IBus er sat op, så ordforslag og læs mens du skriver virker."""
+
+    def checks(self) -> list[SetupCheck]:
+        installed = _ibus_installed()
+        result = [
+            SetupCheck(
+                "IBus er installeret",
+                installed,
+                "Installér IBus: sudo dnf install ibus python3-gobject",
+            )
+        ]
+        if _is_kde_wayland():
+            chosen = "ibus" in _kwin_input_method().lower()
+            result.append(
+                SetupCheck(
+                    "IBus er valgt som virtuelt tastatur",
+                    chosen,
+                    "Vælg »IBus Wayland« under Systemindstillinger → Tastatur → Virtuelt tastatur.",
+                )
+            )
+        running = installed and ibus_running()
+        result.append(
+            SetupCheck("IBus kører", running, "IBus starter, når det er valgt som tastatur.")
+        )
+        connected = running and _current_engine() == ENGINE_NAME
+        result.append(
+            SetupCheck(
+                "Ordhjælp er koblet på IBus",
+                connected,
+                "Gem indstillingerne. Ordhjælp kobler sig på af sig selv efter nogle sekunder.",
+            )
+        )
+        return result
+
+    def guide(self) -> list[str]:
+        steps = []
+        if not _ibus_installed():
+            steps.append(
+                "Installér IBus. Skriv i en terminal: <b>sudo dnf install ibus python3-gobject</b>"
+            )
+        if _is_kde_wayland():
+            steps += [
+                "Klik på <b>Åbn tastaturindstillingerne</b> herunder.",
+                "Vælg <b>IBus Wayland</b> på listen, og klik på <b>Anvend</b>.",
+            ]
+        else:
+            steps.append("Vælg <b>IBus</b> som indtastningsmetode i systemets indstillinger.")
+        steps += [
+            "Gem Ordhjælps indstillinger, hvis du har ændret noget.",
+            "Klik på <b>Tjek igen</b>. Når alle punkter har et grønt flueben, er du klar.",
+        ]
+        return steps
+
+    def open_settings(self) -> bool:
+        if not _is_kde_wayland():
+            return False
+        for cmd in (["kcmshell6", KDE_KEYBOARD_KCM], ["systemsettings", KDE_KEYBOARD_KCM]):
+            if shutil.which(cmd[0]) is None:
+                continue
+            try:
+                subprocess.Popen(cmd, start_new_session=True)  # noqa: S603
+            except OSError:
+                continue
+            return True
+        return False

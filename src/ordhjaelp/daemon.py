@@ -21,6 +21,7 @@ from ordhjaelp.platform import (
     get_screen_capture,
     get_selection_provider,
     get_text_injector,
+    get_typing_setup,
 )
 from ordhjaelp.platform.base import HotkeyProvider
 from ordhjaelp.services.dictation import DictationService
@@ -84,6 +85,8 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
             service.stop()
             return {"ok": True}
         if cmd == "forslag":
+            if not cfg.prediction_enabled:  # IBus kører måske kun for at læse op
+                return {"ok": True, "forslag": []}
             return {"ok": True, "forslag": prediction.suggest(str(req.get("ord", "")))}
         if cmd == "skrevet":  # fra ordforslag: et ord og/eller en sætning er skrevet færdig
             return {"ok": True, "laeser": _read_while_typing(cfg, service, req)}
@@ -150,7 +153,7 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
         threading.Thread(target=start_hotkeys, daemon=True, name="hotkey-setup").start()
 
     input_method = None
-    if cfg.prediction_enabled:
+    if cfg.typing_help_enabled:  # ordforslag og læs mens du skriver går begge gennem IBus
         try:
             input_method = get_input_method()
             input_method.start()  # starter også senere af sig selv, hvis IBus mangler nu
@@ -225,6 +228,7 @@ def _settings_hooks(
         autostart=autostart,
         models=ModelStore(voices_dir(), whisper_dir()),
         set_read_on_select=set_read_on_select,
+        typing_setup=get_typing_setup(),
     )
 
 

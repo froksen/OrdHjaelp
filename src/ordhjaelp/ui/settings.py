@@ -21,12 +21,14 @@ from PySide6.QtWidgets import (
     QPushButton,
     QSlider,
     QVBoxLayout,
+    QWidget,
 )
 
 from ordhjaelp.config import Config, save_config
 from ordhjaelp.models.catalog import Kind, of_kind, size_text
 from ordhjaelp.models.store import ModelStore
-from ordhjaelp.platform.base import Autostart
+from ordhjaelp.platform.base import Autostart, TypingSetup
+from ordhjaelp.ui.typing_setup import OK_COLOR, TypingSetupDialog, all_ok, summary
 
 log = logging.getLogger(__name__)
 
@@ -48,6 +50,7 @@ class SettingsHooks:
     autostart: Autostart | None = None
     models: ModelStore | None = None
     set_read_on_select: Callable[[bool], None] | None = None
+    typing_setup: TypingSetup | None = None
 
 
 def needs_restart(old: Config, new: Config) -> bool:
@@ -56,12 +59,12 @@ def needs_restart(old: Config, new: Config) -> bool:
     return (
         old.dictation_enabled,
         old.dictation_model,
-        old.prediction_enabled,
+        old.typing_help_enabled,
         old.read_at_pointer,
     ) != (
         new.dictation_enabled,
         new.dictation_model,
-        new.prediction_enabled,
+        new.typing_help_enabled,
         new.read_at_pointer,
     )
 
@@ -152,9 +155,7 @@ class SettingsDialog(QDialog):
         self.read_sentence = QCheckBox("Læs sætningen op ved punktum, ! og ?")
         self.read_sentence.setChecked(cfg.read_sentence_on_period)
         col.addWidget(self.read_sentence)
-        note = QLabel("Kræver at IBus er valgt som indtastningsmetode (se vejledningen).")
-        note.setStyleSheet("color: gray")
-        col.addWidget(note)
+        self._add_typing_status(col)
         layout.addWidget(box)
 
         # -- Ikoner og start --------------------------------------------
@@ -192,6 +193,51 @@ class SettingsDialog(QDialog):
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
         self._speed_changed(self.speed.value())
+
+    # -- ordforslag: er IBus sat op? ----------------------------------------
+    def _add_typing_status(self, col: QVBoxLayout) -> None:
+        self._typing_boxes = (self.prediction, self.read_word, self.read_sentence)
+        setup = self._hooks.typing_setup
+        if setup is None:  # fx Windows: findes endnu ikke
+            note = QLabel("Ordforslag og læs mens du skriver findes endnu kun på Linux.")
+            note.setStyleSheet("color: gray")
+            note.setWordWrap(True)
+            col.addWidget(note)
+            return
+        self.typing_status = QLabel()
+        self.typing_status.setWordWrap(True)
+        help_button = QPushButton("Hjælp til opsætning …")
+        help_button.setToolTip("Vejledning og tjek af, om IBus er sat op")
+        help_button.clicked.connect(self._open_typing_setup)
+        self._typing_row = QWidget()
+        row = QHBoxLayout(self._typing_row)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.addWidget(self.typing_status, 1)
+        row.addWidget(help_button)
+        col.addWidget(self._typing_row)
+        for box in self._typing_boxes:
+            box.toggled.connect(self._update_typing_status)
+        self._update_typing_status()
+
+    def _update_typing_status(self) -> None:
+        setup = self._hooks.typing_setup
+        wanted = any(box.isChecked() for box in self._typing_boxes)
+        self._typing_row.setVisible(wanted)
+        if setup is None or not wanted:
+            return
+        checks = setup.checks()
+        if not all_ok(checks) and all_ok(checks[:-1]) and not self._original.typing_help_enabled:
+            # Alt er sat op – Ordhjælp kobler sig først på IBus, når der gemmes
+            text, color = "✔ Klar – virker, når du gemmer", OK_COLOR
+        else:
+            text, color = summary(checks)
+        self.typing_status.setText(text)
+        self.typing_status.setStyleSheet(f"color: {color}")
+
+    def _open_typing_setup(self) -> None:
+        assert self._hooks.typing_setup is not None
+        TypingSetupDialog(self._hooks.typing_setup, self).exec()
+        self._update_typing_status()
 
     def _fill_models(self, selected: str) -> None:
         """Kun hentede talemodeller kan vælges."""
