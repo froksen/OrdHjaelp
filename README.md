@@ -77,7 +77,11 @@ autostart ved login. Indstillingerne gemmes i `~/.config/ordhjaelp/config.toml`.
 
 ### Med RPM
 
-Byg RPM'en (kræver `rpm-build`):
+Hent `ordhjaelp-<version>-1.fc<NN>.x86_64.rpm` under
+[Releases](https://github.com/froksen/OrdHj-lp/releases). GitHub Actions bygger den i en
+Fedora-container og afprøver, at den kan installeres med dnf.
+
+Eller byg RPM'en selv (kræver `rpm-build`):
 
 ```bash
 sudo dnf install rpm-build
