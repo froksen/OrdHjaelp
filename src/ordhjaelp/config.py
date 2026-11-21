@@ -68,7 +68,7 @@ class Config:
 
     @property
     def typing_help_enabled(self) -> bool:
-        """Ordforslag eller læs mens du skriver – begge kræver indtastningsmetoden (IBus)."""
+        """Ordforslag eller læs mens du skriver – begge kræver tastaturdelen (IBus på Linux)."""
         return self.prediction_enabled or self.read_word_on_space or self.read_sentence_on_period
 
     @classmethod
@@ -119,7 +119,7 @@ tempo = {round(self.speed, 2)}
 # Brug udklipsholderen (Ctrl+C), hvis der ikke er markeret noget tekst.
 # Slået fra som standard, da det kan læse gammel, kopieret tekst op.
 brug_udklipsholder = {b(self.use_clipboard_fallback)}
-# Læs mens du skriver (kræver ordforslag/IBus):
+# Læs mens du skriver (på Linux kræver det IBus):
 laes_ord_ved_mellemrum = {b(self.read_word_on_space)}
 laes_saetning_ved_punktum = {b(self.read_sentence_on_period)}
 # Læs ved markering: læs op, så snart der markeres tekst med musen
@@ -137,7 +137,7 @@ aktiv = {b(self.dictation_enabled)}
 model = {s(self.dictation_model)}
 
 [ordforslag]
-# Forslag mens der skrives (kræver IBus – se README)
+# Forslag mens der skrives (på Linux kræver det IBus – se README)
 aktiv = {b(self.prediction_enabled)}
 
 [ikoner]

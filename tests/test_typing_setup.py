@@ -20,6 +20,9 @@ def app():
 
 
 class FakeSetup:
+    intro = "Sådan virker det"
+    settings_button = "Åbn indstillingerne"
+
     def __init__(self, oks: list[bool]) -> None:
         self.oks = oks
         self.opened = 0

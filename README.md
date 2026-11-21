@@ -140,8 +140,15 @@ uv run ordhjaelp start
 | Diktering | Teksten skrives ind tegn for tegn, så æ, ø og å virker på alle tastaturer |
 | Læs fra skærmen | Tesseract findes også, når det ikke ligger i PATH |
 | Genveje og autostart | Genvejene ændres under `[genveje]` i `%LOCALAPPDATA%\ordhjaelp\ordhjaelp\config.toml` |
+| Sprogmodeller | Velkomstvinduet henter stemme og talegenkendelse første gang. De kan hentes og slettes under indstillingerne |
+| Ordforslag | Forslagene vises i et lille vindue ved markøren. Vælg med F1–F5, med musen eller med ↓ ↑ og Tab. Der skal ikke sættes noget op i Windows |
+| Læs mens du skriver | Ordet læses ved mellemrum og sætningen ved punktum, ! og ? |
 
-Kommer senere på Windows: ordforslag, læs ved markering og læs under musen.
+Ordforslag virker ikke i programmer, der kører som administrator (det tillader Windows ikke).
+Nogle programmer (fx Chrome og Word) fortæller ikke, hvor markøren står. Så vises
+forslagene ved musen i stedet.
+
+Kommer senere på Windows: læs ved markering, læs under musen og en installer.
 Bemærk: udklipsholderens historik (Win+V) kan vise den tekst, der er læst op.
 
 ## Kommandoer
@@ -197,7 +204,7 @@ src/ordhjaelp/
 ├── platform/       ALT styresystem-specifikt
 │   ├── base.py     interfaces
 │   ├── linux/      Wayland/X11: xdg-desktop-portal, IBus, wl-clipboard
-│   ├── windows/    (senere)
+│   ├── windows/    Win32 via ctypes: genveje, Ctrl+C, SendInput, tastaturovervågning
 │   └── macos/      (senere)
 ├── ipc.py          lokal forbindelse mellem kommandoer, IBus og tjenesten
 ├── daemon.py       baggrundstjenesten
@@ -208,6 +215,12 @@ På Linux/Wayland bruger Ordhjælp **xdg-desktop-portal** til genveje (GlobalSho
 indsættelse af dikteret tekst (RemoteDesktop) og skærmbilleder (Screenshot), og **IBus**
 til ordforslag. IBus-delen er en tynd klient, der kører med systemets Python og henter
 forslagene fra Ordhjælp-tjenesten.
+
+På Windows lytter Ordhjælp efter tastetryk med en tastaturovervågning (`WH_KEYBOARD_LL`).
+Bogstaverne går direkte til programmet. Vælges et forslag, slettes det skrevne ord med
+Backspace, og forslaget skrives i stedet. Kun tasterne til at vælge forslag holdes tilbage,
+og kun mens forslagene vises. Logikken ligger i `platform/windows/typing_tracker.py` og
+testes på alle systemer.
 
 ## Udvikling
 
@@ -231,7 +244,8 @@ Ordhjælp er under udvikling og afprøves på Fedora KDE Plasma (Wayland).
 - [x] Indstillinger, autostart, RPM
 - [x] Velkomstvindue ved første start: vælg og hent sprogmodeller; administrér dem i indstillingerne
 - [x] Windows: læs op, diktering, læs fra skærmen, genveje, autostart (prøveudgave)
-- [ ] Windows: ordforslag, læs ved markering, læs under musen, installer
+- [x] Windows: sprogmodeller, ordforslag, læs mens du skriver (prøveudgave)
+- [ ] Windows: læs ved markering, læs under musen, installer
 - [ ] macOS
 
 ## Licens

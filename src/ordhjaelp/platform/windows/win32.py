@@ -23,6 +23,10 @@ VK_MENU = 0x12  # Alt
 VK_LWIN = 0x5B
 VK_RWIN = 0x5C
 VK_RETURN = 0x0D
+VK_BACK = 0x08
+VK_CAPITAL = 0x14
+VK_LCONTROL = 0xA2
+VK_RMENU = 0xA5  # AltGr
 VK_C = 0x43
 MODIFIER_VKS = (VK_SHIFT, VK_CONTROL, VK_MENU, VK_LWIN, VK_RWIN)
 
@@ -31,6 +35,24 @@ GMEM_MOVEABLE = 0x0002
 
 WM_HOTKEY = 0x0312
 WM_QUIT = 0x0012
+
+# Tastatur- og musovervågning (low-level hooks)
+WH_KEYBOARD_LL = 13
+WH_MOUSE_LL = 14
+WM_KEYDOWN = 0x0100
+WM_KEYUP = 0x0101
+WM_SYSKEYDOWN = 0x0104
+WM_SYSKEYUP = 0x0105
+WM_LBUTTONDOWN = 0x0201
+WM_RBUTTONDOWN = 0x0204
+WM_MBUTTONDOWN = 0x0207
+LLKHF_INJECTED = 0x10
+EVENT_SYSTEM_FOREGROUND = 0x0003
+WINEVENT_OUTOFCONTEXT = 0x0000
+GWL_EXSTYLE = -20
+WS_EX_NOACTIVATE = 0x08000000
+WS_EX_TOOLWINDOW = 0x00000080
+WS_EX_TOPMOST = 0x00000008
 
 
 # -- strukturer til SendInput -------------------------------------------------
@@ -72,26 +94,85 @@ class INPUT(ctypes.Structure):
     _fields_ = [("type", wintypes.DWORD), ("u", _INPUTUNION)]
 
 
-def key_input(vk: int = 0, scan: int = 0, flags: int = 0) -> INPUT:
+# -- strukturer til tastatur- og musovervågning ---------------------------------
+class KBDLLHOOKSTRUCT(ctypes.Structure):
+    _fields_ = [
+        ("vkCode", wintypes.DWORD),
+        ("scanCode", wintypes.DWORD),
+        ("flags", wintypes.DWORD),
+        ("time", wintypes.DWORD),
+        ("dwExtraInfo", ctypes.c_size_t),
+    ]
+
+
+class MSLLHOOKSTRUCT(ctypes.Structure):
+    _fields_ = [
+        ("pt", wintypes.POINT),
+        ("mouseData", wintypes.DWORD),
+        ("flags", wintypes.DWORD),
+        ("time", wintypes.DWORD),
+        ("dwExtraInfo", ctypes.c_size_t),
+    ]
+
+
+class GUITHREADINFO(ctypes.Structure):
+    _fields_ = [
+        ("cbSize", wintypes.DWORD),
+        ("flags", wintypes.DWORD),
+        ("hwndActive", wintypes.HWND),
+        ("hwndFocus", wintypes.HWND),
+        ("hwndCapture", wintypes.HWND),
+        ("hwndMenuOwner", wintypes.HWND),
+        ("hwndMoveSize", wintypes.HWND),
+        ("hwndCaret", wintypes.HWND),
+        ("rcCaret", wintypes.RECT),
+    ]
+
+
+LRESULT = ctypes.c_ssize_t
+# WINFUNCTYPE findes kun på Windows. CFUNCTYPE andre steder, så modulet kan importeres.
+_FUNCTYPE = getattr(ctypes, "WINFUNCTYPE", ctypes.CFUNCTYPE)
+HOOKPROC = _FUNCTYPE(LRESULT, ctypes.c_int, wintypes.WPARAM, wintypes.LPARAM)
+WINEVENTPROC = _FUNCTYPE(None, wintypes.HANDLE, wintypes.DWORD, wintypes.HWND,
+                         wintypes.LONG, wintypes.LONG, wintypes.DWORD, wintypes.DWORD)  # fmt: skip
+
+
+def key_input(vk: int = 0, scan: int = 0, flags: int = 0, extra: int = 0) -> INPUT:
     item = INPUT(type=INPUT_KEYBOARD)
-    item.u.ki = KEYBDINPUT(wVk=vk, wScan=scan, dwFlags=flags, time=0, dwExtraInfo=0)
+    item.u.ki = KEYBDINPUT(wVk=vk, wScan=scan, dwFlags=flags, time=0, dwExtraInfo=extra)
     return item
 
 
-def unicode_inputs(text: str) -> list[INPUT]:
-    """Taste-hændelser, der skriver teksten uanset tastaturlayout (også æ, ø, å og emoji)."""
+def unicode_inputs(text: str, extra: int = 0) -> list[INPUT]:
+    """Taste-hændelser, der skriver teksten uanset tastaturlayout (også æ, ø, å og emoji).
+
+    :param extra: mærke på hændelserne, så vores egen tastaturovervågning kan kende dem
+    """
     items: list[INPUT] = []
     for char in text.replace("\r\n", "\n"):
         if char == "\n":
-            items += [key_input(VK_RETURN), key_input(VK_RETURN, flags=KEYEVENTF_KEYUP)]
+            items += [
+                key_input(VK_RETURN, extra=extra),
+                key_input(VK_RETURN, flags=KEYEVENTF_KEYUP, extra=extra),
+            ]
             continue
         data = char.encode("utf-16-le")
         for i in range(0, len(data), 2):  # tegn uden for BMP bliver til to "surrogates"
             unit = int.from_bytes(data[i : i + 2], "little")
             items += [
-                key_input(scan=unit, flags=KEYEVENTF_UNICODE),
-                key_input(scan=unit, flags=KEYEVENTF_UNICODE | KEYEVENTF_KEYUP),
+                key_input(scan=unit, flags=KEYEVENTF_UNICODE, extra=extra),
+                key_input(scan=unit, flags=KEYEVENTF_UNICODE | KEYEVENTF_KEYUP, extra=extra),
             ]
+    return items
+
+
+def backspace_inputs(count: int, extra: int = 0) -> list[INPUT]:
+    items: list[INPUT] = []
+    for _ in range(count):
+        items += [
+            key_input(VK_BACK, extra=extra),
+            key_input(VK_BACK, flags=KEYEVENTF_KEYUP, extra=extra),
+        ]
     return items
 
 
@@ -132,6 +213,36 @@ def user32():  # noqa: ANN201
     dll.GetDC.argtypes = [wintypes.HWND]
     dll.GetDC.restype = wintypes.HDC
     dll.ReleaseDC.argtypes = [wintypes.HWND, wintypes.HDC]
+    # Tastatur- og musovervågning
+    dll.SetWindowsHookExW.argtypes = [ctypes.c_int, HOOKPROC, wintypes.HINSTANCE, wintypes.DWORD]
+    dll.SetWindowsHookExW.restype = wintypes.HHOOK
+    dll.CallNextHookEx.argtypes = [wintypes.HHOOK, ctypes.c_int, wintypes.WPARAM,
+                                   wintypes.LPARAM]  # fmt: skip
+    dll.CallNextHookEx.restype = LRESULT
+    dll.UnhookWindowsHookEx.argtypes = [wintypes.HHOOK]
+    dll.SetWinEventHook.argtypes = [wintypes.DWORD, wintypes.DWORD, wintypes.HMODULE,
+                                    WINEVENTPROC, wintypes.DWORD, wintypes.DWORD,
+                                    wintypes.DWORD]  # fmt: skip
+    dll.SetWinEventHook.restype = wintypes.HANDLE
+    dll.UnhookWinEvent.argtypes = [wintypes.HANDLE]
+    dll.TranslateMessage.argtypes = [ctypes.POINTER(wintypes.MSG)]
+    dll.DispatchMessageW.argtypes = [ctypes.POINTER(wintypes.MSG)]
+    dll.ToUnicodeEx.argtypes = [wintypes.UINT, wintypes.UINT, ctypes.POINTER(ctypes.c_ubyte),
+                                wintypes.LPWSTR, ctypes.c_int, wintypes.UINT,
+                                wintypes.HKL]  # fmt: skip
+    dll.GetKeyboardLayout.argtypes = [wintypes.DWORD]
+    dll.GetKeyboardLayout.restype = wintypes.HKL
+    dll.GetKeyState.argtypes = [ctypes.c_int]
+    dll.GetKeyState.restype = ctypes.c_short
+    dll.GetGUIThreadInfo.argtypes = [wintypes.DWORD, ctypes.POINTER(GUITHREADINFO)]
+    dll.ClientToScreen.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.POINT)]
+    dll.GetCursorPos.argtypes = [ctypes.POINTER(wintypes.POINT)]
+    dll.WindowFromPoint.argtypes = [wintypes.POINT]
+    dll.WindowFromPoint.restype = wintypes.HWND
+    dll.GetWindowLongPtrW.argtypes = [wintypes.HWND, ctypes.c_int]
+    dll.GetWindowLongPtrW.restype = ctypes.c_ssize_t
+    dll.SetWindowLongPtrW.argtypes = [wintypes.HWND, ctypes.c_int, ctypes.c_ssize_t]
+    dll.SetWindowLongPtrW.restype = ctypes.c_ssize_t
     return dll
 
 
@@ -146,6 +257,8 @@ def kernel32():  # noqa: ANN201
     dll.GlobalFree.argtypes = [wintypes.HGLOBAL]
     dll.GlobalFree.restype = wintypes.HGLOBAL
     dll.GetCurrentThreadId.restype = wintypes.DWORD
+    dll.GetModuleHandleW.argtypes = [wintypes.LPCWSTR]
+    dll.GetModuleHandleW.restype = wintypes.HMODULE
     return dll
 
 

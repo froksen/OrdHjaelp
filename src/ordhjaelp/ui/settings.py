@@ -121,6 +121,10 @@ class SettingsDialog(QDialog):
         note.setStyleSheet("color: gray")
         note.setWordWrap(True)
         form.addRow(note)
+        if sys.platform == "win32":  # kræver UI Automation, som endnu ikke er lavet
+            for box_ in (self.read_on_select, self.read_at_pointer):
+                box_.setEnabled(False)
+                box_.setToolTip("Kommer senere på Windows")
         layout.addWidget(box)
 
         # -- Diktering --------------------------------------------------
@@ -194,12 +198,12 @@ class SettingsDialog(QDialog):
         layout.addWidget(buttons)
         self._speed_changed(self.speed.value())
 
-    # -- ordforslag: er IBus sat op? ----------------------------------------
+    # -- ordforslag: er systemet sat op (IBus på Linux)? ---------------------
     def _add_typing_status(self, col: QVBoxLayout) -> None:
         self._typing_boxes = (self.prediction, self.read_word, self.read_sentence)
         setup = self._hooks.typing_setup
-        if setup is None:  # fx Windows: findes endnu ikke
-            note = QLabel("Ordforslag og læs mens du skriver findes endnu kun på Linux.")
+        if setup is None:  # fx macOS: findes endnu ikke
+            note = QLabel("Ordforslag og læs mens du skriver findes endnu ikke her.")
             note.setStyleSheet("color: gray")
             note.setWordWrap(True)
             col.addWidget(note)
@@ -207,7 +211,7 @@ class SettingsDialog(QDialog):
         self.typing_status = QLabel()
         self.typing_status.setWordWrap(True)
         help_button = QPushButton("Hjælp til opsætning …")
-        help_button.setToolTip("Vejledning og tjek af, om IBus er sat op")
+        help_button.setToolTip("Vejledning og tjek af, om ordforslag er sat op")
         help_button.clicked.connect(self._open_typing_setup)
         self._typing_row = QWidget()
         row = QHBoxLayout(self._typing_row)
@@ -227,7 +231,7 @@ class SettingsDialog(QDialog):
             return
         checks = setup.checks()
         if not all_ok(checks) and all_ok(checks[:-1]) and not self._original.typing_help_enabled:
-            # Alt er sat op – Ordhjælp kobler sig først på IBus, når der gemmes
+            # Alt er sat op – Ordhjælp kobler sig først på (IBus/tastaturet), når der gemmes
             text, color = "✔ Klar – virker, når du gemmer", OK_COLOR
         else:
             text, color = summary(checks)
