@@ -1,0 +1,1 @@
+"""macOS-adaptere (kommer senere)."""

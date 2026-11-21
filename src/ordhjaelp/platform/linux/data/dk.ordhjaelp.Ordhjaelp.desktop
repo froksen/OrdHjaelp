@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Ordhjælp
+GenericName=Læse- og skrivehjælp
+Comment=Læser markeret tekst højt med dansk stemme
+Exec=@EXEC@ start
+Icon=accessories-text-editor
+Terminal=false
+Categories=Utility;Accessibility;
+Keywords=oplæsning;ordblind;LST;tale;
+X-KDE-StartupNotify=false
