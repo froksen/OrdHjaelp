@@ -89,6 +89,19 @@ def test_needs_restart() -> None:
     assert needs_restart(a, Config(prediction_enabled=False))
 
 
+def test_read_on_select_applies_live(app, hooks) -> None:
+    h, calls, tmp = hooks
+    seen: list[bool] = []
+    h.set_read_on_select = seen.append
+    d = SettingsDialog(h)
+    assert d.read_on_select.isChecked() is False  # slået fra som standard
+    d.read_on_select.setChecked(True)
+    d.accept()
+    assert seen == [True]
+    assert calls["restart"] == 0
+    assert Config.from_toml((tmp / "config.toml").read_text()).read_on_select is True
+
+
 def test_read_at_pointer_needs_restart() -> None:
     assert needs_restart(Config(), Config(read_at_pointer=True))
 
