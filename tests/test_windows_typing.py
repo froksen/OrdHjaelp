@@ -149,10 +149,15 @@ def test_late_answer_for_old_word_is_ignored() -> None:
     assert fake.tracker.candidates == []
 
 
-def test_typed_word_is_not_suggested() -> None:
-    fake = Fake({"skole": ["skole", "skoler"]})
+def test_typed_word_stays_among_suggestions() -> None:
+    fake = Fake({"skole": ["skole", "skoler", "skolen"]})
     fake.type("skole")
-    assert fake.tracker.candidates == ["skoler"]
+    assert fake.tracker.candidates == ["skole", "skoler", "skolen"]
+    # Vælges det skrevne ord, skal intet skrives om: mellemrummet går bare videre
+    fake.tracker.key(Key.DOWN)
+    assert fake.tracker.key(Key.CHAR, " ") is False
+    assert fake.replaced == []
+    assert fake.typed("skrevet")[-1]["ord"] == "skole"
 
 
 def test_click_takes_suggestion_and_right_click_reads_it() -> None:

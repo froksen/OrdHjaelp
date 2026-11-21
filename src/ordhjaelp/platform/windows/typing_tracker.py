@@ -161,7 +161,8 @@ class TypingTracker:
 
         # Mellemrum, tegnsætning, Enter …: afslut ordet. Har eleven valgt et forslag,
         # skal forslaget skrives før tasten, så tasten holdes tilbage og skrives af os.
-        if self.cursor >= 0 and key in (Key.CHAR, Key.ENTER):
+        chosen = self._current_candidate() if self.cursor >= 0 else self.word
+        if chosen != self.word and key in (Key.CHAR, Key.ENTER):
             after = "\n" if key is Key.ENTER else char
             self._commit_word(self._current_candidate(), after)
             self._track_without_word(key, char)
@@ -210,7 +211,9 @@ class TypingTracker:
         with self._lock:
             if word != self.word:
                 return
-            self.candidates = [w for w in found if w != word][:PAGE_SIZE]
+            # Det skrevne ord bliver stående, hvis ordbogen kender det: så kan eleven se
+            # (og høre), at det er stavet rigtigt
+            self.candidates = list(found)[:PAGE_SIZE]
             self.cursor = -1
             if self.candidates:
                 self._show(list(self.candidates), self.cursor)
