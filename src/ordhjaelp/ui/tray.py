@@ -116,9 +116,6 @@ class TrayApp:
             act_tray_help = QAction("Vis ikonerne ved uret …", menu)
             act_tray_help.triggered.connect(self.open_tray_help)
             menu.addAction(act_tray_help)
-        self._act_toolbar = QAction("Vis knaplinjen", menu)
-        self._act_toolbar.triggered.connect(self.show_toolbar)
-        menu.addAction(self._act_toolbar)
         self._settings = settings
         self._settings_dialog = None
         self._shortcuts_dialog = None
@@ -234,7 +231,6 @@ class TrayApp:
         return QSystemTrayIcon.isSystemTrayAvailable()
 
     def run(self, on_started: Callable[[], None] | None = None) -> int:
-        self.tray.show()
         self.set_view(self._view)
         if sys.platform == "win32" and self._view == VIEW_TRAY:  # knaplinjen er ikke gemt
             QTimer.singleShot(3000, self._first_run_tray_tip)
@@ -333,7 +329,8 @@ class TrayApp:
     def set_view(self, view: str) -> None:
         """Skift mellem knaplinjen og ikonerne ved uret (uden genstart).
 
-        Det blå ikon ved uret vises altid: det har menuen med indstillinger.
+        Med knaplinjen vises intet ved uret: menuen ligger under ⋯ i linjen.
+        Med ikoner ved uret har det blå ikon menuen.
         """
         self._view = view
         icons = self._settings.config.show_icons if self._settings else {}
@@ -345,19 +342,12 @@ class TrayApp:
             if icon is not None:
                 icon.setVisible(view == VIEW_TRAY and icons.get(name, True))
             self.toolbar.set_button_visible(name, icons.get(name, True))
-        self._act_toolbar.setVisible(view == VIEW_TOOLBAR)
+        self.tray.setVisible(view == VIEW_TRAY)
         if view == VIEW_TOOLBAR:
             if not self.toolbar.isVisible():
                 self.toolbar.show_at_saved_place()
         else:
             self.toolbar.hide()
-
-    def show_toolbar(self) -> None:
-        """Vis knaplinjen foldet ud (menuen ved uret), fx hvis eleven har mistet den."""
-        if not self.toolbar.isVisible():
-            self.toolbar.show_at_saved_place()
-        self.toolbar.set_folded(False)
-        self.toolbar.raise_()
 
     # -- læs fra skærmen -----------------------------------------------
     def _on_screen_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:

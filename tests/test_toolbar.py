@@ -92,6 +92,7 @@ def test_toolbar_view_hides_extra_tray_icons(app) -> None:
     assert tray.toolbar.isVisible()
     assert not tray.mic.isVisible() and not tray.screen_icon.isVisible()
     assert not tray.pdf_icon.isVisible()
+    assert not tray.tray.isVisible()  # intet ved uret, når knaplinjen bruges
     assert set(tray.toolbar.buttons) == {"laes", "dikter", "skaerm", "pdf"}
     tray.toolbar.hide()
 
@@ -100,8 +101,10 @@ def test_tray_view_hides_toolbar_and_can_switch_live(app) -> None:
     tray, *_ = make_tray(VIEW_TRAY)
     assert not tray.toolbar.isVisible()
     assert tray.mic.isVisible() and tray.screen_icon.isVisible()
+    assert tray.tray.isVisible()  # det blå ikon med menuen
     tray.set_view(VIEW_TOOLBAR)
     assert tray.toolbar.isVisible() and not tray.mic.isVisible()
+    assert not tray.tray.isVisible()
     tray.toolbar.hide()
 
 
@@ -192,8 +195,6 @@ def test_toolbar_remembers_place_and_fold(app, own_config_dir) -> None:
     again, *_ = make_tray()
     assert again.toolbar.pos() == QPoint(150, 120)
     assert again.toolbar.folded
-    again.show_toolbar()  # "Vis knaplinjen" i menuen folder den ud igen
-    assert not again.toolbar.folded
     again.toolbar.hide()
 
 

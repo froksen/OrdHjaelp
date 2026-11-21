@@ -358,7 +358,7 @@ def _run_tray(
     hotkeys: dict[str, str] | None = None,
     restart: Callable[[], None] | None = None,
 ) -> bool:
-    """Vis ikonet ved uret. Returnerer False, hvis det ikke kan lade sig gøre.
+    """Vis knaplinjen eller ikonerne ved uret. False, hvis det ikke kan lade sig gøre.
 
     Mangler skrivebordet en udvidelse til ikonerne (GNOME), forklares det. Slår brugeren
     den til, kaldes restart, og der returneres True: Ordhjælp starter forfra med ikoner.
@@ -368,10 +368,14 @@ def _run_tray(
     except ImportError as exc:
         log.warning("Ikon ved uret er ikke tilgængeligt (%s)", exc)
         return False
-    if not TrayApp.available():
+    from ordhjaelp.config import VIEW_TRAY
+
+    wants_tray = hooks is not None and hooks.config.view == VIEW_TRAY
+    if wants_tray and not TrayApp.available():  # knaplinjen har ikke brug for uret
         log.warning("Skrivebordet har ikke noget område til ikoner ved uret")
         return _explain_missing_tray(hotkeys, restart)
-    log.info("Ordhjælp kører. Markér tekst og klik på ikonet ved uret.")
+    where = "ikonet ved uret" if wants_tray else "den blå knap i knaplinjen"
+    log.info("Ordhjælp kører. Markér tekst og klik på %s.", where)
     TrayApp(service, dictation, screen, ui_actions, hooks, hotkeys).run()
     return True
 

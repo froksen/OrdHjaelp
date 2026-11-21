@@ -40,7 +40,8 @@ Knapperne ligger i en lille knaplinje nederst til højre på skærmen, lige over
 opgavelinjen. Træk i prikkerne (⠿) for at flytte den, og klik på **‹** for at folde den
 ind til en lille fane. Ordhjælp husker, hvor linjen lå. På Wayland huskes pladsen ikke,
 og linjen starter altid nederst til højre (på GNOME vælger skrivebordet selv pladsen). Under
-**⋯** ligger indstillinger, genveje og Luk. Foretrækker man et ikon for hver funktion
+**⋯** ligger indstillinger, genveje og Luk. Når knaplinjen bruges, viser Ordhjælp intet
+ved uret. Foretrækker man et ikon for hver funktion
 ved uret, vælges det i indstillingerne under **Knapper**.
 
 ### Ordforslag
@@ -90,7 +91,7 @@ usynligt tekstlag oven på siderne. Siderne ser ud som før.
 
 ### Indstillinger
 
-Klik på **⋯** i knaplinjen eller højreklik på det blå ikon ved uret → **Indstillinger**: taletempo (med "Prøv stemmen"),
+Klik på **⋯** i knaplinjen (eller højreklik på det blå ikon ved uret, hvis du bruger ikoner) → **Indstillinger**: taletempo (med "Prøv stemmen"),
 læs ved markering, diktering og talemodel, ordforslag, læs mens du skriver, knaplinje eller ikoner ved uret, hvilke knapper der vises, og
 autostart ved login. Indstillingerne gemmes i `~/.config/ordhjaelp/config.toml`.
 
