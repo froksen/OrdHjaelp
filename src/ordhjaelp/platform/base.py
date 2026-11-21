@@ -23,6 +23,13 @@ class SelectionProvider(Protocol):
         """Returnér teksten i udklipsholderen, eller None."""
         ...
 
+    def on_change(self, callback: Callable[[], None]) -> bool:
+        """Kald callback (fra en baggrundstråd), hver gang markeringen ændrer sig.
+
+        Returnerer False, hvis styresystemet ikke kan melde ændringer.
+        """
+        ...
+
 
 class HotkeyProvider(Protocol):
     def start(self, bindings: dict[str, str], on_activated: Callable[[str], None]) -> None:

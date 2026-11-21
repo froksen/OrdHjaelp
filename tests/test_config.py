@@ -60,3 +60,11 @@ def test_roundtrip_keeps_all_values() -> None:
 def test_strings_with_quotes_are_escaped() -> None:
     cfg = Config(voice='mærkelig "stemme"')
     assert Config.from_toml(cfg.to_toml()).voice == 'mærkelig "stemme"'
+
+
+def test_read_on_select_is_off_by_default_and_roundtrips() -> None:
+    assert Config().read_on_select is False
+    assert Config.from_toml(DEFAULT_CONFIG).read_on_select is False
+    cfg = Config(read_on_select=True)
+    assert Config.from_toml(cfg.to_toml()).read_on_select is True
+    assert Config.from_toml("[oplaesning]\nlaes_ved_markering = true\n").read_on_select

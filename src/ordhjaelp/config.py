@@ -47,6 +47,7 @@ class Config:
     use_clipboard_fallback: bool = False
     read_word_on_space: bool = False
     read_sentence_on_period: bool = False
+    read_on_select: bool = False
     dictation_enabled: bool = True
     dictation_model: str = "dansk-hurtig"
     prediction_enabled: bool = True
@@ -75,6 +76,7 @@ class Config:
         )
         cfg.read_word_on_space = bool(reading.get("laes_ord_ved_mellemrum", False))
         cfg.read_sentence_on_period = bool(reading.get("laes_saetning_ved_punktum", False))
+        cfg.read_on_select = bool(reading.get("laes_ved_markering", False))
         dictation = raw.get("diktering", {})
         cfg.dictation_enabled = bool(dictation.get("aktiv", cfg.dictation_enabled))
         cfg.dictation_model = str(dictation.get("model", cfg.dictation_model))
@@ -110,6 +112,9 @@ brug_udklipsholder = {b(self.use_clipboard_fallback)}
 # Læs mens du skriver (kræver ordforslag/IBus):
 laes_ord_ved_mellemrum = {b(self.read_word_on_space)}
 laes_saetning_ved_punktum = {b(self.read_sentence_on_period)}
+# Læs ved markering: læs op, så snart der markeres tekst med musen
+# (dobbeltklik = et ord, trippelklik = en linje eller et afsnit).
+laes_ved_markering = {b(self.read_on_select)}
 
 [diktering]
 aktiv = {b(self.dictation_enabled)}

@@ -29,6 +29,7 @@ til Windows og macOS.
 | ⬚ | **Læs fra skærmen** | Klik på det **lilla ikon** (eller **Ctrl+Alt+B**), og træk en firkant om tekst i et billede, en PDF eller et spil |
 | ✍️ | **Ordforslag** | Forslag ved markøren, mens der skrives – også ved lydret stavning |
 | 🗣️ | **Læs mens du skriver** | Ordet læses op ved mellemrum og/eller sætningen ved punktum (slås til i indstillingerne) |
+| 🖱️ | **Læs ved markering** | Dobbeltklik på et ord, og det læses op. Trippelklik læser linjen eller afsnittet (slås til i indstillingerne) |
 
 ### Ordforslag
 
@@ -57,7 +58,7 @@ Den testes mod en samling typiske stavefejl
 ### Indstillinger
 
 Højreklik på det blå ikon → **Indstillinger**: taletempo (med "Prøv stemmen"),
-diktering og talemodel, ordforslag, læs mens du skriver, hvilke ikoner der vises, og
+læs ved markering, diktering og talemodel, ordforslag, læs mens du skriver, hvilke ikoner der vises, og
 autostart ved login. Indstillingerne gemmes i `~/.config/ordhjaelp/config.toml`.
 
 ## Installation (Fedora KDE)
