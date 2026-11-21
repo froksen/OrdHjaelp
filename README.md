@@ -115,6 +115,29 @@ uv run ordhjaelp start
   *Systemindstillinger → Tastatur → Virtuelt tastatur → **IBus Wayland***.
   Ordhjælp opdager det af sig selv.
 
+## Installation (Windows, prøveudgave)
+
+Windows-udgaven er ny og endnu ikke afprøvet bredt. Der er ingen installer endnu.
+
+```powershell
+winget install astral-sh.uv
+winget install UB-Mannheim.TesseractOCR   # til "læs fra skærmen" (vælg den danske sprogpakke)
+git clone https://github.com/froksen/OrdHj-lp.git ordhjaelp; cd ordhjaelp
+uv sync
+uv run ordhjaelp installer --autostart    # start ved login
+uv run ordhjaelp start
+```
+
+| Virker på Windows | Sådan |
+|---|---|
+| Læs op | Markeret tekst kopieres med Ctrl+C, og det, der lå i udklipsholderen, lægges tilbage bagefter |
+| Diktering | Teksten skrives ind tegn for tegn, så æ, ø og å virker på alle tastaturer |
+| Læs fra skærmen | Tesseract findes også, når det ikke ligger i PATH |
+| Genveje og autostart | Genvejene ændres under `[genveje]` i `%LOCALAPPDATA%\ordhjaelp\ordhjaelp\config.toml` |
+
+Kommer senere på Windows: ordforslag, læs ved markering og læs under musen.
+Bemærk: udklipsholderens historik (Win+V) kan vise den tekst, der er læst op.
+
 ## Kommandoer
 
 | Kommando | Hvad den gør |
@@ -198,7 +221,9 @@ Ordhjælp er under udvikling og afprøves på Fedora KDE Plasma (Wayland).
 - [x] Ordforslag med fonetisk matching, læs mens du skriver
 - [x] Indstillinger, autostart, RPM
 - [ ] Synlig besked ved første start, mens modellerne hentes
-- [ ] Windows og macOS
+- [x] Windows: læs op, diktering, læs fra skærmen, genveje, autostart (prøveudgave)
+- [ ] Windows: ordforslag, læs ved markering, læs under musen, installer
+- [ ] macOS
 
 ## Licens
 

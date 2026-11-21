@@ -7,9 +7,12 @@ Windows/macOS: Tesseract-installeren (senere i Ordhjælps egen installer).
 
 from __future__ import annotations
 
+import os
 import re
 import shutil
 import subprocess
+import sys
+from pathlib import Path
 
 from ordhjaelp.services.screen_read import OcrUnavailable
 
@@ -22,18 +25,21 @@ class TesseractOCR:
 
     @staticmethod
     def available() -> bool:
-        return shutil.which("tesseract") is not None
+        return find_tesseract() is not None
 
     def recognize(self, png: bytes) -> str:
-        if not self.available():
+        exe = find_tesseract()
+        if exe is None:
             raise OcrUnavailable("Tesseract er ikke installeret")
         result = subprocess.run(
             # --psm 6: én blok tekst – passer godt til et udsnit, eleven har markeret
-            ["tesseract", "stdin", "stdout", "-l", self._language, "--psm", "6"],
+            [exe, "stdin", "stdout", "-l", self._language, "--psm", "6"],
             input=png,
             capture_output=True,
             timeout=60,
             check=False,
+            # Intet sort konsolvindue på Windows, når Ordhjælp kører uden konsol
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
         )
         if result.returncode != 0:
             err = result.stderr.decode("utf-8", errors="replace").strip()
@@ -41,6 +47,23 @@ class TesseractOCR:
                 raise OcrUnavailable(f"Sprogpakken '{self._language}' til Tesseract mangler")
             raise RuntimeError(f"Tesseract fejlede: {err}")
         return clean_ocr_text(result.stdout.decode("utf-8", errors="replace"))
+
+
+def find_tesseract() -> str | None:
+    """Tesseract-programmet. På Windows lægger installeren det sjældent i PATH."""
+    found = shutil.which("tesseract")
+    if found or sys.platform != "win32":
+        return found
+    for base in (
+        os.environ.get("PROGRAMFILES"),
+        os.environ.get("PROGRAMFILES(X86)"),
+        os.path.join(os.environ.get("LOCALAPPDATA", ""), "Programs"),
+    ):
+        if base:
+            candidate = Path(base) / "Tesseract-OCR" / "tesseract.exe"
+            if candidate.exists():
+                return str(candidate)
+    return None
 
 
 def clean_ocr_text(text: str) -> str:

@@ -7,6 +7,7 @@ og en named pipe på Windows – uden ekstra afhængigheder.
 from __future__ import annotations
 
 import contextlib
+import getpass
 import logging
 import os
 import sys
@@ -31,7 +32,7 @@ CONNECT_ERRORS = (OSError, EOFError, TimeoutError, AuthenticationError)
 
 def address() -> str:
     if sys.platform == "win32":
-        return rf"\\.\pipe\ordhjaelp-{os.getlogin()}"
+        return rf"\\.\pipe\ordhjaelp-{getpass.getuser()}"
     runtime = os.environ.get("XDG_RUNTIME_DIR") or tempfile.gettempdir()
     return str(Path(runtime) / "ordhjaelp.sock")
 

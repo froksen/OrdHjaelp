@@ -41,6 +41,7 @@ def _hunspell_accepts(words: list[str]) -> set[str] | None:
             capture_output=True,
             timeout=120,
             check=False,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),  # intet konsolvindue
         )
     except (OSError, subprocess.TimeoutExpired):
         return None

@@ -1,4 +1,11 @@
-import json
+import sys
+
+import pytest
+
+if sys.platform != "linux":  # Linux-kode (KWin over D-Bus). dbus-fast findes kun på Linux
+    pytest.skip("kun Linux", allow_module_level=True)
+
+import json  # noqa: E402
 
 from ordhjaelp.platform.linux.kwin_pointer import PointerInfo, make_script, parse_report
 
