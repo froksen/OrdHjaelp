@@ -152,7 +152,17 @@ class _BasicSettings(QGroupBox):
         # Ordhjælp viser vejledningen lige efter start, når ikonerne findes.
         self.tray_icons = QCheckBox("Vis Ordhjælps ikoner ved uret (ikke gemt under ^)")
         self.tray_icons.setChecked(True)
-        self.tray_icons.setVisible(sys.platform == "win32")
+        # Windows lader ikke programmer gøre det selv: forklar, hvordan man gør
+        self.tray_icons_how = QPushButton("Se hvordan …")
+        self.tray_icons_how.setToolTip("Vejledning: sådan vises ikonerne ved uret")
+        self.tray_icons_how.clicked.connect(self._show_tray_help)
+        self.tray_icons_note = QLabel(
+            "Windows lader kun dig selv vise ikonerne. Lige efter start viser Ordhjælp,\n"
+            "hvordan du trækker dem frem fra ^ ved uret. Det tager et øjeblik."
+        )
+        self.tray_icons_note.setStyleSheet("color: gray")
+        for widget in (self.tray_icons, self.tray_icons_how, self.tray_icons_note):
+            widget.setVisible(sys.platform == "win32")
         boxes = [
             self.autostart,
             self.prediction,
@@ -163,7 +173,16 @@ class _BasicSettings(QGroupBox):
         ]
         for i, box in enumerate(boxes):
             grid.addWidget(box, i // 2, i % 2)
-        grid.addWidget(self.tray_icons, len(boxes) // 2, 0, 1, 2)
+        row = len(boxes) // 2
+        grid.addWidget(self.tray_icons, row, 0)
+        grid.addWidget(self.tray_icons_how, row, 1, Qt.AlignmentFlag.AlignLeft)
+        grid.addWidget(self.tray_icons_note, row + 1, 0, 1, 2)
+
+    def _show_tray_help(self) -> None:
+        from ordhjaelp.platform import open_tray_icon_settings
+        from ordhjaelp.ui.tray_help import TrayIconsHelpDialog
+
+        TrayIconsHelpDialog(open_tray_icon_settings, self).exec()
 
     def apply(self, cfg: Config) -> None:
         cfg.prediction_enabled = self.prediction.isChecked()
