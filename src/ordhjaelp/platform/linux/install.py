@@ -35,7 +35,18 @@ def install(autostart: bool) -> list[Path]:
     for target in targets:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(content, encoding="utf-8")
-    return targets
+    icon = _icon_path()
+    icon.parent.mkdir(parents=True, exist_ok=True)
+    icon.write_bytes(files("ordhjaelp.ui").joinpath("icons", "ordhjaelp.svg").read_bytes())
+    return [*targets, icon]
+
+
+def _icon_path() -> Path:
+    return (
+        Path(user_data_dir("icons", appauthor=False, roaming=False))
+        / "hicolor/scalable/apps"
+        / f"{APP_ID}.svg"
+    )
 
 
 def uninstall() -> list[Path]:
@@ -43,6 +54,7 @@ def uninstall() -> list[Path]:
     for target in (
         Path(user_data_dir("applications", appauthor=False, roaming=False)) / DESKTOP_NAME,
         Path(user_config_dir("autostart")) / DESKTOP_NAME,
+        _icon_path(),
     ):
         if target.exists():
             target.unlink()

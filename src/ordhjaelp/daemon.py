@@ -144,7 +144,8 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
 
     if restart_requested.is_set():
         log.info("Starter forfra med nye indstillinger")
-        os.execv(sys.executable, [sys.executable, *sys.argv])
+        # Altid via "-m ordhjaelp": virker både fra udviklingsmappen og fra RPM-installationen
+        os.execv(sys.executable, [sys.executable, "-m", "ordhjaelp", *sys.argv[1:]])
 
 
 def _settings_hooks(cfg: Config, tts: PiperEngine, service: ReadAloudService, restart):  # noqa: ANN001, ANN202
