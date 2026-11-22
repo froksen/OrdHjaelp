@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.locale.1.10.0.schema.json
+PackageIdentifier: OleFrandsen.Ordhjaelp
+PackageVersion: 0.4.0.1
+PackageLocale: en-US
+Publisher: Ole Frandsen
+PackageName: Ordhjælp
+License: GPL-3.0-or-later
+ShortDescription: Free Danish reading and writing aid for pupils with dyslexia
+Description: |-
+  Ordhjælp reads selected text aloud with a Danish voice, turns speech into text, reads
+  text from the screen (OCR) and suggests words while typing. Everything runs offline.
+Tags:
+- danish
+- dyslexia
+- text-to-speech
+- speech-to-text
+- word-prediction
+- accessibility
+ManifestType: locale
+ManifestVersion: 1.10.0

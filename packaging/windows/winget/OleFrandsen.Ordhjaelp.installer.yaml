@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.10.0.schema.json
+PackageIdentifier: OleFrandsen.Ordhjaelp
+PackageVersion: 0.4.0.1
+MinimumOSVersion: 10.0.17763.0
+InstallerType: inno
+Scope: user
+InstallModes:
+- interactive
+- silent
+UpgradeBehavior: install
+ProductCode: '{6E0C5B7A-3F0D-4C55-9C1B-0D5A2F7E9B41}_is1'
+AppsAndFeaturesEntries:
+- DisplayName: Ordhjælp
+  Publisher: Ole Frandsen
+  ProductCode: '{6E0C5B7A-3F0D-4C55-9C1B-0D5A2F7E9B41}_is1'
+Installers:
+- Architecture: x64
+  InstallerUrl: https://github.com/froksen/OrdHjaelp/releases/download/v0.4.0.1/Ordhjaelp-0.4.0.1-Setup.exe
+  InstallerSha256: 1A41424A1C7987779B0250750EDD43FAC3C20776C0CA9D18B202C14DB219DD81
+ManifestType: installer
+ManifestVersion: 1.10.0
