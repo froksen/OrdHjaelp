@@ -3,9 +3,9 @@
 # startmenuen. Hunspell og Tesseract foelger med i zip-filen.
 #
 # Installer (i PowerShell):
-#   irm https://github.com/froksen/OrdHj-lp/releases/latest/download/install.ps1 | iex
+#   irm https://github.com/froksen/OrdHjaelp/releases/latest/download/install.ps1 | iex
 # Med valg:
-#   & ([scriptblock]::Create((irm https://github.com/froksen/OrdHj-lp/releases/latest/download/install.ps1))) -IngenAutostart
+#   & ([scriptblock]::Create((irm https://github.com/froksen/OrdHjaelp/releases/latest/download/install.ps1))) -IngenAutostart
 # Afinstaller:
 #   & "$env:LOCALAPPDATA\Programs\Ordhjaelp\install.ps1" -Afinstaller
 #
@@ -27,7 +27,7 @@ $ProgressPreference = "SilentlyContinue"  # ellers er Invoke-WebRequest meget la
 
 $ae = [char]0xE6; $oe = [char]0xF8; $aa = [char]0xE5
 $Navn = "Ordhj${ae}lp"
-$Repo = "froksen/OrdHj-lp"
+$Repo = "froksen/OrdHjaelp"
 $Exe = Join-Path $Mappe "Ordhjaelp.exe"
 $Startmenu = Join-Path ([Environment]::GetFolderPath("Programs")) "$Navn.lnk"
 $SkrivebordGenvej = Join-Path ([Environment]::GetFolderPath("Desktop")) "$Navn.lnk"
