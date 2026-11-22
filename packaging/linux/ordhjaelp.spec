@@ -56,6 +56,10 @@ cp -a %{stage}/. %{buildroot}/
 /usr/bin/gtk-update-icon-cache -q %{_datadir}/icons/hicolor &>/dev/null || :
 
 %changelog
+* Sun Nov 22 2026 Ole Frandsen - 0.4.0.1-1
+- Om Ordhjælp: forfattere og de frie projekter, Ordhjælp bygger på
+- Repoet hedder nu OrdHjaelp (links og installationsscript)
+
 * Sat Nov 21 2026 Ole Frandsen - 0.4.0.0-1
 - Knaplinje: alle knapper samlet i en lille linje på skærmen, altid øverst
 - Gør en scannet PDF søgbar, så teksten kan markeres og læses op
