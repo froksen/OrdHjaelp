@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-HOMEPAGE = "https://github.com/froksen/OrdHj-lp"
+HOMEPAGE = "https://github.com/froksen/OrdHjaelp"
 LICENSE_NAME = "GPL-3.0-or-later"
 LICENSE_URL = "https://www.gnu.org/licenses/gpl-3.0.html"
 
