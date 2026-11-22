@@ -136,7 +136,7 @@ Derefter:
 
 ## Installation på Windows (prøveudgave)
 
-Der er to måder. Ingen af dem kræver **administrator**, og begge installerer kun for den
+Der er tre måder. Ingen af dem kræver **administrator**, og begge installerer kun for den
 bruger, der er logget ind (i `%LOCALAPPDATA%\Programs\Ordhjaelp`).
 
 **1. Installationsprogrammet:** hent **Ordhjaelp-<version>-Setup.exe** under
@@ -157,6 +157,16 @@ Scriptet kan også hentes og læses igennem først:
 ```powershell
 & ([scriptblock]::Create((irm https://github.com/froksen/OrdHjaelp/releases/latest/download/install.ps1))) -IngenAutostart -Skrivebord
 ```
+
+**3. winget** (på vej, venter på godkendelse hos Microsoft):
+
+```powershell
+winget install OleFrandsen.Ordhjaelp
+```
+
+winget bruger det samme installationsprogram og kan også opdatere Ordhjælp
+(`winget upgrade OleFrandsen.Ordhjaelp`). Det er praktisk for skolens IT, fordi det kan
+køres på mange computere på én gang.
 
 - Hunspell (dansk ordbog) og Tesseract (læs fra skærmen) følger med. Der skal ikke
   installeres andet.
