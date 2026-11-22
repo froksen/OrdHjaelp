@@ -127,6 +127,10 @@ class TrayApp:
             act_settings = QAction("Indstillinger …", menu)
             act_settings.triggered.connect(self.open_settings)
             menu.addAction(act_settings)
+        self._about_dialog = None
+        self._act_about = QAction("Om Ordhjælp …", menu)
+        self._act_about.triggered.connect(self.open_about)
+        menu.addAction(self._act_about)
         menu.addAction(act_quit)
         self._menu = menu  # behold reference
         self.tray.setContextMenu(menu)
@@ -304,6 +308,16 @@ class TrayApp:
         self._shortcuts_dialog.show()
         self._shortcuts_dialog.raise_()
         self._shortcuts_dialog.activateWindow()
+
+    def open_about(self) -> None:
+        from ordhjaelp.ui.about import AboutDialog
+
+        if self._about_dialog is None:
+            self._about_dialog = AboutDialog(self._icon_idle)
+            self._about_dialog.setWindowIcon(self._icon_idle)
+        self._about_dialog.show()
+        self._about_dialog.raise_()
+        self._about_dialog.activateWindow()
 
     def open_pdf_ocr(self) -> None:
         from ordhjaelp.ui.pdf_ocr import PdfOcrJob, choose_pdf

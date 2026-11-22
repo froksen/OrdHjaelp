@@ -67,6 +67,18 @@ def make_tray(view=VIEW_TOOLBAR, icons=None):
     return tray, service, dictation, hooks
 
 
+def test_menu_has_about_before_quit(app) -> None:
+    tray, *_ = make_tray()
+    texts = [a.text() for a in tray._menu.actions()]
+    assert texts[-2:] == ["Om Ordhjælp …", "Luk Ordhjælp"]
+    tray._act_about.trigger()
+    dialog = tray._about_dialog
+    assert dialog is not None and dialog.isVisible()
+    tray.open_about()  # åbnes igen: samme vindue, ikke et nyt
+    assert tray._about_dialog is dialog
+    dialog.close()
+
+
 def test_toolbar_is_default_view() -> None:
     assert Config().view == VIEW_TOOLBAR
 

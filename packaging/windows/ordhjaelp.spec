@@ -34,6 +34,8 @@ datas += [
 
 # huggingface_hub spørger efter hf_xet's versionsnummer, før det bruges til hurtig hentning
 datas += copy_metadata("hf_xet")
+# Om-vinduet viser Ordhjælps version (importlib.metadata)
+datas += copy_metadata("ordhjaelp")
 
 binaries = []
 binaries += collect_dynamic_libs("ctranslate2")  # talegenkendelse
