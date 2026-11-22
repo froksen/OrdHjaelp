@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.10.0.schema.json
+PackageIdentifier: OleFrandsen.Ordhjaelp
+PackageVersion: 0.4.0.1
+PackageLocale: da-DK
+Publisher: Ole Frandsen
+PublisherUrl: https://github.com/froksen
+PublisherSupportUrl: https://github.com/froksen/OrdHj-lp/issues
+Author: Ole Frandsen
+PackageName: Ordhjælp
+PackageUrl: https://github.com/froksen/OrdHj-lp
+License: GPL-3.0-or-later
+LicenseUrl: https://github.com/froksen/OrdHj-lp/blob/main/LICENSE
+ShortDescription: Gratis dansk læse- og skriveværktøj (LST) til elever
+Description: |-
+  Ordhjælp læser markeret tekst op med en dansk stemme, laver tale om til tekst, læser tekst
+  fra skærmen og giver ordforslag, mens man skriver, også ved stavefejl som "sgole" → "skole".
+  Alt kører offline på computeren.
+Moniker: ordhjaelp
+Tags:
+- dansk
+- ordblind
+- oplæsning
+- ordforslag
+- tale-til-tekst
+- tilgængelighed
+ReleaseNotesUrl: https://github.com/froksen/OrdHj-lp/releases
+ManifestType: defaultLocale
+ManifestVersion: 1.10.0

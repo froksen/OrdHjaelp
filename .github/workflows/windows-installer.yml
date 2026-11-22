@@ -104,3 +104,19 @@ jobs:
             $global:LASTEXITCODE = 0
           }
           gh release upload $env:GITHUB_REF_NAME @files --clobber
+      - name: Opdatér Ordhjælp i winget
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+        run: |
+          # Se packaging/windows/winget/README.md. Kræver, at pakken allerede findes i winget-pkgs.
+          if (-not $env:WINGET_TOKEN) {
+            Write-Host "WINGET_TOKEN er ikke sat, så winget opdateres ikke"
+            exit 0
+          }
+          $version = $env:GITHUB_REF_NAME.TrimStart("v")
+          $url = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/$env:GITHUB_REF_NAME/Ordhjaelp-$version-Setup.exe"
+          Invoke-WebRequest https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
+          .\wingetcreate.exe update OleFrandsen.Ordhjaelp --version $version --urls $url --submit --token $env:WINGET_TOKEN
+          if ($LASTEXITCODE) { throw "wingetcreate fejlede ($LASTEXITCODE)" }
