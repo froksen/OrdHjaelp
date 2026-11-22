@@ -108,7 +108,7 @@ Ordhjælp findes til **Fedora Linux med KDE Plasma** og til **Windows**.
 ## Installation på Fedora KDE
 
 Hent `ordhjaelp-<version>-1.fc<NN>.x86_64.rpm` under
-[Releases](https://github.com/froksen/OrdHj-lp/releases), og installér den:
+[Releases](https://github.com/froksen/OrdHjaelp/releases), og installér den:
 
 ```bash
 sudo dnf install ./ordhjaelp-*.x86_64.rpm
@@ -140,13 +140,13 @@ Der er to måder. Ingen af dem kræver **administrator**, og begge installerer k
 bruger, der er logget ind (i `%LOCALAPPDATA%\Programs\Ordhjaelp`).
 
 **1. Installationsprogrammet:** hent **Ordhjaelp-<version>-Setup.exe** under
-[Releases](https://github.com/froksen/OrdHj-lp/releases), og dobbeltklik på den. Der kommer en
+[Releases](https://github.com/froksen/OrdHjaelp/releases), og dobbeltklik på den. Der kommer en
 genvej i startmenuen, og Ordhjælp kan fjernes under *Indstillinger → Apps*.
 
 **2. PowerShell:** åbn PowerShell, og kopiér denne linje ind:
 
 ```powershell
-irm https://github.com/froksen/OrdHj-lp/releases/latest/download/install.ps1 | iex
+irm https://github.com/froksen/OrdHjaelp/releases/latest/download/install.ps1 | iex
 ```
 
 Scriptet henter Ordhjælp, lægger en genvej i startmenuen, slår autostart til og starter
@@ -155,7 +155,7 @@ Scriptet kan også hentes og læses igennem først:
 [`packaging/windows/install.ps1`](packaging/windows/install.ps1). Valg (fx uden autostart):
 
 ```powershell
-& ([scriptblock]::Create((irm https://github.com/froksen/OrdHj-lp/releases/latest/download/install.ps1))) -IngenAutostart -Skrivebord
+& ([scriptblock]::Create((irm https://github.com/froksen/OrdHjaelp/releases/latest/download/install.ps1))) -IngenAutostart -Skrivebord
 ```
 
 - Hunspell (dansk ordbog) og Tesseract (læs fra skærmen) følger med. Der skal ikke
@@ -262,7 +262,7 @@ Kør fra kildekoden på Fedora KDE:
 ```bash
 sudo dnf install wl-clipboard portaudio tesseract tesseract-langpack-dan hunspell-da ibus at-spi2-core xdotool
 pip install --user uv
-git clone https://github.com/froksen/OrdHj-lp.git ordhjaelp && cd ordhjaelp
+git clone https://github.com/froksen/OrdHjaelp.git ordhjaelp && cd ordhjaelp
 uv sync
 uv run ordhjaelp installer --autostart   # menupunkt + start ved login
 uv run ordhjaelp start
@@ -273,7 +273,7 @@ Eller på Windows:
 ```powershell
 winget install astral-sh.uv
 winget install UB-Mannheim.TesseractOCR   # til "læs fra skærmen" (vælg den danske sprogpakke)
-git clone https://github.com/froksen/OrdHj-lp.git ordhjaelp; cd ordhjaelp
+git clone https://github.com/froksen/OrdHjaelp.git ordhjaelp; cd ordhjaelp
 uv sync
 uv run ordhjaelp installer --autostart    # start ved login
 uv run ordhjaelp start
