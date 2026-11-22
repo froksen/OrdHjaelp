@@ -2,8 +2,8 @@
 
 > **In English:** Ordhjælp ("word help") is a free, open-source reading and writing aid
 > for Danish pupils with dyslexia or reading/writing difficulties – an alternative to
-> commercial tools such as AppWriter and IntoWords, built for Linux (KDE/Wayland first,
-> with Windows and macOS in mind). It reads selected text aloud with a natural Danish
+> commercial tools such as AppWriter and IntoWords. It runs on Windows and on Fedora Linux
+> with KDE Plasma (Wayland). It reads selected text aloud with a natural Danish
 > voice, turns speech into text, reads text from any part of the screen (OCR), and offers
 > word suggestions while typing – including for phonetic misspellings such as
 > *"sgole" → "skole"*. Everything runs offline on the computer, using only ready-made,
@@ -13,8 +13,8 @@
 ---
 
 Ordhjælp er et gratis læse- og skriveværktøj (LST) til danske elever. Det er lavet som et
-alternativ til AppWriter og IntoWords på **Linux** og er bygget, så det senere kan flyttes
-til Windows og macOS.
+alternativ til AppWriter og IntoWords og kører på **Windows** og **Fedora Linux med KDE
+Plasma**.
 
 - **Gratis og open source** (GPL-3.0)
 - **Offline:** stemme, talegenkendelse og ordforslag kører på computeren – intet sendes ud
@@ -71,12 +71,13 @@ Den testes mod en samling typiske stavefejl
 ### Læs under musen
 
 Ordhjælp spørger programmet, hvilken tekst der står under musen. Det bruger
-tilgængeligheds-API'en **AT-SPI**, den samme som skærmlæseren Orca.
+styresystemets tilgængelighed, den samme som skærmlæsere bruger: **AT-SPI** på Linux og
+**UI Automation** på Windows.
 
 - Virker i programmer med god tilgængelighed: Firefox, LibreOffice, Kate, KDE- og GTK-programmer
 - Chrome og Electron-programmer skal måske startes med `--force-renderer-accessibility`
 - Virker ikke i billeder, scannede PDF'er og spil. Brug **Læs fra skærmen** dér
-- På Wayland kræver det **KDE Plasma**: KWin fortæller, hvor musen er. På X11 bruges `xdotool`
+- På Linux kræver det **KDE Plasma**: KWin fortæller, hvor musen er
 - Genvejene registreres ved start, så Ordhjælp genstarter, når funktionen slås til eller fra
 
 ### Gør en PDF søgbar
@@ -101,7 +102,8 @@ Klik på **⋯** i knaplinjen (eller højreklik på det blå ikon ved uret, hvis
 | **Knapper** | Knaplinje eller ikoner ved uret, og hvilke knapper der vises |
 | **Start og genveje** | Autostart ved login og oversigt over genvejene |
 
-Indstillingerne gemmes i `~/.config/ordhjaelp/config.toml`.
+Indstillingerne gemmes i `~/.config/ordhjaelp/config.toml` på Linux og i
+`%LOCALAPPDATA%\ordhjaelp\ordhjaelp\config.toml` på Windows.
 
 Ordhjælp findes til **Fedora Linux med KDE Plasma** og til **Windows**.
 
@@ -221,8 +223,8 @@ modellerne klarer sig med en rigtig optagelse.
 ## Opbygning
 
 Ordhjælp er skrevet i **Python** med **Qt (PySide6)** til brugerfladen. Alt, der taler med
-styresystemet, ligger bag små interfaces i `platform/`, så resten kan genbruges på
-Windows og macOS.
+styresystemet, ligger bag små interfaces i `platform/`. Resten af koden er den samme på
+Windows og Linux, og den kan senere genbruges på macOS.
 
 ```
 src/ordhjaelp/
@@ -307,7 +309,8 @@ stavefejl fra elever. Tilføj dem til [`tests/ordmotor/fejlkorpus.tsv`](tests/or
 
 ## Status
 
-Ordhjælp er under udvikling og afprøves på Fedora KDE Plasma (Wayland).
+Ordhjælp er under udvikling og afprøves på Windows og Fedora KDE Plasma (Wayland).
+Windows-udgaven er stadig en prøveudgave.
 
 - [x] Læs op, diktering, læs fra skærmen
 - [x] Ordforslag med fonetisk matching, læs mens du skriver
