@@ -326,6 +326,9 @@ Ordhjælp er under udvikling og afprøves på Fedora KDE Plasma (Wayland).
 - **qvisty** ([@qvisty](https://github.com/qvisty)): bidragsyder (Windows-udgaven, læs ved
   markering, læs under musen, udviklingsnoter)
 
+I programmet viser **Om Ordhjælp …** i menuen forfatterne og alle de frie projekter,
+Ordhjælp bygger på (listen ligger i [`ui/about.py`](src/ordhjaelp/ui/about.py)).
+
 ## Kodesignering (code signing policy)
 
 Ordhjælp er søgt om gratis kodesignering hos [SignPath Foundation](https://signpath.org/).
