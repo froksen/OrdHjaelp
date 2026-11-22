@@ -342,34 +342,7 @@ Windows-udgaven er stadig en prøveudgave.
 I programmet viser **Om Ordhjælp …** i menuen forfatterne og alle de frie projekter,
 Ordhjælp bygger på (listen ligger i [`ui/about.py`](src/ordhjaelp/ui/about.py)).
 
-## Kodesignering (code signing policy)
-
-Ordhjælp er søgt om gratis kodesignering hos [SignPath Foundation](https://signpath.org/).
-Indtil det er godkendt, er Windows-filerne **ikke** signeret.
-
-Alle filer til Windows bygges af GitHub Actions direkte fra kildekoden i dette repo
-([`.github/workflows/windows-installer.yml`](.github/workflows/windows-installer.yml)).
-Ingen bygger dem på sin egen computer.
-
-**Roller:**
-
-| Rolle | Hvem |
-|---|---|
-| Forfattere (committers) | [Ole Frandsen (@froksen)](https://github.com/froksen) |
-| Gennemlæsere (reviewers) | [Ole Frandsen (@froksen)](https://github.com/froksen) |
-| Godkendere (approvers) | [Ole Frandsen (@froksen)](https://github.com/froksen) |
-| Bidragsydere | [qvisty (@qvisty)](https://github.com/qvisty) og andre, der laver pull requests |
-
-- Alle ændringer fra bidragsydere kommer ind som pull requests og gennemlæses af en
-  forfatter, før de flettes. Det gælder også byggescripts og GitHub Actions.
-- Hver udgivelse, der skal signeres, godkendes manuelt af en godkender.
-- Alle i teamet bruger to-trinslogin (MFA) på GitHub.
-
-<!-- Når SignPath har godkendt projektet, erstattes de to første linjer i afsnittet med:
-Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org)
--->
-
-### Privatliv
+## Privatliv
 
 Ordhjælp kører på computeren og sender ingen tekst, lyd eller oplysninger om brugeren ud.
 Programmet henter kun noget fra internettet, når brugeren beder om det eller første gang:
