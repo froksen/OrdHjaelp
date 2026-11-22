@@ -4,12 +4,12 @@ PackageVersion: 0.4.0.1
 PackageLocale: da-DK
 Publisher: Ole Frandsen
 PublisherUrl: https://github.com/froksen
-PublisherSupportUrl: https://github.com/froksen/OrdHj-lp/issues
+PublisherSupportUrl: https://github.com/froksen/OrdHjaelp/issues
 Author: Ole Frandsen
 PackageName: Ordhjælp
-PackageUrl: https://github.com/froksen/OrdHj-lp
+PackageUrl: https://github.com/froksen/OrdHjaelp
 License: GPL-3.0-or-later
-LicenseUrl: https://github.com/froksen/OrdHj-lp/blob/main/LICENSE
+LicenseUrl: https://github.com/froksen/OrdHjaelp/blob/main/LICENSE
 ShortDescription: Gratis dansk læse- og skriveværktøj (LST) til elever
 Description: |-
   Ordhjælp læser markeret tekst op med en dansk stemme, laver tale om til tekst, læser tekst
@@ -23,6 +23,6 @@ Tags:
 - ordforslag
 - tale-til-tekst
 - tilgængelighed
-ReleaseNotesUrl: https://github.com/froksen/OrdHj-lp/releases
+ReleaseNotesUrl: https://github.com/froksen/OrdHjaelp/releases
 ManifestType: defaultLocale
 ManifestVersion: 1.10.0

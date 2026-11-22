@@ -43,7 +43,7 @@ def test_installer_url_points_at_release_setup() -> None:
     installer = _manifests()[f"{PKG}.installer.yaml"]
     version = _field(installer, "PackageVersion")
     assert _field(installer, "InstallerUrl") == (
-        f"https://github.com/froksen/OrdHj-lp/releases/download/v{version}/Ordhjaelp-{version}-Setup.exe"
+        f"https://github.com/froksen/OrdHjaelp/releases/download/v{version}/Ordhjaelp-{version}-Setup.exe"
     )
     assert re.fullmatch(r"[0-9A-F]{64}", _field(installer, "InstallerSha256"))
     # Installeren er pr. bruger (PrivilegesRequired=lowest), og det skal winget vide
