@@ -80,8 +80,12 @@ testcertifikat, installerer den, kører `ordhjaelp --help` og tjekker, at
 
 ## Afprøv pakken på din egen computer
 
-En MSIX-pakke kan kun installeres, når den er signeret. Til afprøvning (i PowerShell
-som administrator, fra repoets rod):
+**Nemmest:** Hent artefaktet **Ordhjaelp-MSIX-test** fra en kørsel af
+"Windows-installer" i GitHub Actions. Det indeholder en signeret testudgave, dens
+testcertifikat og en vejledning (`LAES-MIG.txt`, samme som `LAES-MIG-test.txt` her).
+Stol på certifikatet, og dobbeltklik på pakken.
+
+Selv, med Windows SDK (i PowerShell som administrator, fra repoets rod):
 
 ```powershell
 $udgiver = uv run python packaging\windows\store\make_msix.py --vis udgiver

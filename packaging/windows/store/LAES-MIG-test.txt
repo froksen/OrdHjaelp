@@ -1,0 +1,47 @@
+Ordhjælp – testudgave af MSIX-pakken (Microsoft Store)
+=====================================================
+
+Denne pakke er KUN til afprøvning. Den er signeret med et testcertifikat, som
+GitHub lavede, da pakken blev bygget. Den rigtige pakke signeres af Microsoft Store.
+
+Før du går i gang
+-----------------
+* Luk Ordhjælp, hvis den kører (højreklik/⋯ → Luk Ordhjælp).
+* Afinstallér gerne Setup.exe-udgaven først (Indstillinger → Apps), så du ser
+  velkomstguiden som første gang.
+
+1. Stol på testcertifikatet (én gang pr. pakke)
+-----------------------------------------------
+1. Dobbeltklik på Ordhjaelp-test.cer → "Installer certifikat …".
+2. Vælg "Lokal computer" → Næste (Windows spørger om administrator).
+3. Vælg "Placer alle certifikater i følgende lager" → "Gennemse …".
+4. Vælg "Betroede personer" → OK → Næste → Udfør.
+
+Certifikatet skal komme fra samme mappe som .msix-filen: hver bygning laver
+et nyt certifikat.
+
+2. Installér Ordhjælp
+---------------------
+Dobbeltklik på Ordhjaelp-test.msix → Installér.
+
+3. Det, der skal afprøves
+-------------------------
+1. Navnet "Ordhjælp" (med æ) i startmenuen og i velkomstguiden.
+2. Velkomstguiden og hentningen af sprogmodeller.
+3. Diktering: spørger Windows om lov til mikrofonen?
+4. Start ved login: slå det til i indstillingerne, log ud og ind. Det skal også
+   kunne ses under Indstillinger → Apps → Start.
+5. Genstart efter en ændring i indstillingerne (fx et andet brug).
+6. Ordforslag er slået fra fra start.
+7. I en terminal: "ordhjaelp afinstaller" siger, at Windows klarer det.
+
+Går noget galt, ligger loggen (ordhjaelp.log) under
+%LOCALAPPDATA%\Packages\OrdhjaelpTest_…\
+
+4. Ryd op bagefter (vigtigt)
+----------------------------
+1. Afinstallér Ordhjælp under Indstillinger → Apps. Tjek, at sprogmodellerne
+   forsvinder med den.
+2. Fjern testcertifikatet: tryk Windows+R, skriv certlm.msc, åbn
+   "Betroede personer" → "Certifikater", og slet "Ordhjaelp Test".
+   Ellers stoler computeren fortsat på alt, der er signeret med det.

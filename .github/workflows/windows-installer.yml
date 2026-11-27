@@ -117,10 +117,22 @@ jobs:
           $proc = Start-Process $alias -ArgumentList "afinstaller" -PassThru -Wait
           if ($proc.ExitCode -ne 1) { throw "Ordhjælp opdagede ikke, at den kører fra pakken ($($proc.ExitCode))" }
           Remove-AppxPackage -Package $pkg.PackageFullName
+          # Testudgaven til afprøvning på en anden computer: den signerede pakke, certifikatet
+          # (uden den private nøgle) og en vejledning
+          $out = New-Item -ItemType Directory -Force -Path dist\msix-test
+          Copy-Item $test (Join-Path $out "Ordhjaelp-test.msix")
+          Copy-Item $cer (Join-Path $out "Ordhjaelp-test.cer")
+          Copy-Item packaging\windows\store\LAES-MIG-test.txt (Join-Path $out "LAES-MIG.txt")
       - uses: actions/upload-artifact@v4
         with:
           name: Ordhjaelp-MSIX
           path: dist/Ordhjaelp-*.msix
+          if-no-files-found: error
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ordhjaelp-MSIX-test
+          path: dist/msix-test/
           if-no-files-found: error
           compression-level: 0
       - uses: actions/upload-artifact@v4
