@@ -149,7 +149,11 @@ class ShortcutsDialog(QDialog):
         box = QGroupBox("Med musen")
         col = QVBoxLayout(box)
         mouse_rows = [
-            ("Klik på ikonet", "Læs den markerede tekst op (klik igen for at stoppe)", True),
+            (
+                "Klik på den blå knap",
+                "Læs den markerede tekst op (klik igen for at stoppe)",
+                True,
+            ),
             (
                 "Dobbeltklik",
                 "Læs ordet op, når »Læs ved markering« er slået til",

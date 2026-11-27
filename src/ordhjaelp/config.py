@@ -57,7 +57,6 @@ class Config:
     dictation_enabled: bool = True
     dictation_model: str = "dansk-hurtig"
     prediction_enabled: bool = True
-    pdf_ocr_enabled: bool = False
     hotkeys: dict[str, str] = field(
         default_factory=lambda: {
             "laes": "CTRL+ALT+L",
@@ -69,7 +68,8 @@ class Config:
             "laes_herfra": "CTRL+ALT+3",
         }
     )
-    # Hvilke ikoner der vises ved uret (læs op-ikonet vises altid – det har menuen)
+    # Hvilke knapper der vises ud over læs op: i knaplinjen eller som ikoner ved uret.
+    # "pdf" styrer både knappen og menupunktet "Gør en PDF søgbar".
     show_icons: dict[str, bool] = field(
         default_factory=lambda: {"dikter": True, "skaerm": True, "pdf": True}
     )
@@ -101,7 +101,8 @@ class Config:
         cfg.dictation_model = str(dictation.get("model", cfg.dictation_model))
         prediction = raw.get("ordforslag", {})
         cfg.prediction_enabled = bool(prediction.get("aktiv", cfg.prediction_enabled))
-        cfg.pdf_ocr_enabled = bool(raw.get("pdf", {}).get("soegbar", False))
+        # [pdf] soegbar (til og med version 0.4) viste kun menupunktet. Nu styrer [ikoner] pdf
+        # både knappen og menupunktet, så den gamle indstilling læses ikke længere.
         cfg.hotkeys.update({str(k): str(v) for k, v in raw.get("genveje", {}).items()})
         icons = dict(raw.get("ikoner", {}))
         icons.pop("altid_synlige", None)  # fra version 0.2 (virkede ikke), er ikke et ikon
@@ -123,7 +124,8 @@ class Config:
         icons = "\n".join(f"{k} = {b(v)}" for k, v in self.show_icons.items())
         return f"""\
 # Ordhjælp – indstillinger
-# Kan også ændres via højreklik på det blå ikon → Indstillinger.
+# Kan også ændres under ⋯ i knaplinjen → Indstillinger
+# (eller højreklik på det blå ikon, hvis knapperne vises som ikoner ved uret).
 
 [oplaesning]
 # Piper-stemme. Se https://huggingface.co/rhasspy/piper-voices
@@ -159,14 +161,10 @@ aktiv = {b(self.prediction_enabled)}
 # eller "ikoner" (et ikon for hver funktion ved uret)
 knapper = {s(self.view)}
 
-[pdf]
-# "Gør en PDF søgbar" i menuen (⋯ i knaplinjen og det blå ikon): teksten i en scannet PDF
-# bliver til rigtig tekst, så den kan markeres og læses op.
-soegbar = {b(self.pdf_ocr_enabled)}
-
 [ikoner]
-# Hvilke knapper der vises (dikter = mikrofon, skaerm = læs fra skærmen,
-# pdf = gør en scannet PDF søgbar)
+# Hvilke knapper der vises ud over læs op, i knaplinjen eller som ikoner ved uret
+# (dikter = mikrofon, skaerm = læs fra skærmen, pdf = gør en scannet PDF søgbar: teksten
+# bliver til rigtig tekst, så den kan markeres og læses op. Står også i menuen).
 {icons}
 
 [genveje]
