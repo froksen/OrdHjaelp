@@ -1,4 +1,4 @@
-"""Indstillingsvindue (til voksne) i fire faner: læs op, skriv, knapper, start og genveje."""
+"""Indstillingsvindue (til voksne) i faner: brug, læs op, skriv, knapper, start og genveje."""
 
 from __future__ import annotations
 
@@ -27,7 +27,17 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ordhjaelp.config import VIEW_TOOLBAR, VIEW_TRAY, Config, save_config
+from ordhjaelp.config import (
+    MESSAGES_SCREEN,
+    MESSAGES_SPEAK,
+    USAGE_ALL,
+    USAGE_DICTATION,
+    USAGE_READ,
+    VIEW_TOOLBAR,
+    VIEW_TRAY,
+    Config,
+    save_config,
+)
 from ordhjaelp.models.catalog import Kind, of_kind, size_text
 from ordhjaelp.models.store import ModelStore
 from ordhjaelp.platform.base import Autostart, TypingSetup
@@ -67,18 +77,21 @@ class SettingsHooks:
 
 def needs_restart(old: Config, new: Config) -> bool:
     """Ændringer, der kun kan træde i kraft ved en genstart."""
-    # Læs under musen bruger genveje, som kun kan registreres ved start
-    return (
-        old.dictation_enabled,
-        old.dictation_model,
-        old.typing_help_enabled,
-        old.read_at_pointer,
-    ) != (
-        new.dictation_enabled,
-        new.dictation_model,
-        new.typing_help_enabled,
-        new.read_at_pointer,
-    )
+
+    # Læs under musen bruger genveje, som kun kan registreres ved start. Et andet brug
+    # (kun læs op, kun diktering) ændrer knapper, genveje og måske hvilke modeller der
+    # skal hentes: det sker ved start.
+    def started_with(cfg: Config) -> tuple:
+        return (
+            cfg.usage,
+            cfg.needs_voice,
+            cfg.dictation_active,
+            cfg.dictation_model,
+            cfg.typing_help_enabled,
+            cfg.read_at_pointer_active,
+        )
+
+    return started_with(old) != started_with(new)
 
 
 class SettingsDialog(QDialog):
@@ -93,6 +106,39 @@ class SettingsDialog(QDialog):
         # det hele, og så ville Qt klemme tekst sammen eller skjule den
         self._tabs = QTabWidget()
         self._pages: list[tuple[QScrollArea, QWidget]] = []
+
+        # == Fane: Brug ====================================================
+        layout = self._add_page("Brug")
+        box = QGroupBox("Hvad skal Ordhjælp hjælpe med?")
+        col = QVBoxLayout(box)
+        self.usage_buttons: dict[str, QRadioButton] = {}
+        for usage, title, explanation in (
+            (USAGE_READ, "Læse op", "Læs op, læs fra skærmen, PDF og læs mens du skriver."),
+            (USAGE_DICTATION, "Diktere", "Kun mikrofonen: tal, og Ordhjælp skriver."),
+            (USAGE_ALL, "Begge dele", "Alle funktioner, også ordforslag."),
+        ):
+            button = QRadioButton(title)
+            self.usage_buttons[usage] = button
+            col.addWidget(button)
+            col.addWidget(_note(explanation))
+        self.usage_buttons.get(cfg.usage, self.usage_buttons[USAGE_ALL]).setChecked(True)
+        col.addWidget(
+            _note(
+                "Det fravalgte bliver gemt og kommer igen, hvis du vælger det igen.\n"
+                "Mangler der en sprogmodel, spørger Ordhjælp, når den starter igen."
+            )
+        )
+        layout.addWidget(box)
+
+        self.messages_box = QGroupBox("Beskeder fra diktering")
+        col = QVBoxLayout(self.messages_box)
+        col.addWidget(_note('Fx "Jeg hørte ikke noget".'))
+        self.messages_screen = QRadioButton("Vis dem på skærmen")
+        self.messages_speak = QRadioButton("Læs dem op (kræver stemmen)")
+        (self.messages_speak if cfg.speaks_messages else self.messages_screen).setChecked(True)
+        col.addWidget(self.messages_screen)
+        col.addWidget(self.messages_speak)
+        layout.addWidget(self.messages_box)
 
         # == Fane: Læs op ==================================================
         layout = self._add_page("Læs op")
@@ -150,6 +196,7 @@ class SettingsDialog(QDialog):
         # == Fane: Skriv ===================================================
         layout = self._add_page("Skriv")
         box = QGroupBox("Diktering")
+        self.dictation_box = box
         form = QFormLayout(box)
         self.dictation = QCheckBox("Slå diktering til")
         self.dictation.setChecked(cfg.dictation_enabled)
@@ -169,6 +216,7 @@ class SettingsDialog(QDialog):
         layout.addWidget(box)
 
         box = QGroupBox("Mens der skrives")
+        self.typing_box = box
         col = QVBoxLayout(box)
         self.prediction = QCheckBox("Vis ordforslag, mens der skrives")
         self.prediction.setChecked(cfg.prediction_enabled)
@@ -219,12 +267,11 @@ class SettingsDialog(QDialog):
         col.addWidget(self.icon_mic)
         col.addWidget(self.icon_screen)
         col.addWidget(self.icon_pdf)
-        col.addWidget(
-            _note(
-                "Gør en PDF søgbar laver en kopi af en scannet PDF, hvor teksten\n"
-                "kan markeres og læses op. Den gamle PDF bliver ikke ændret."
-            )
+        self._pdf_note = _note(
+            "Gør en PDF søgbar laver en kopi af en scannet PDF, hvor teksten\n"
+            "kan markeres og læses op. Den gamle PDF bliver ikke ændret."
         )
+        col.addWidget(self._pdf_note)
         layout.addWidget(box)
 
         # == Fane: Start og genveje ========================================
@@ -269,6 +316,35 @@ class SettingsDialog(QDialog):
         self._buttons = buttons
         self._fit_to_screen()
         self._speed_changed(self.speed.value())
+        for button in self.usage_buttons.values():
+            button.toggled.connect(self._update_usage)
+        self._update_usage()
+
+    # -- brug: kun læs op, kun diktering eller alle funktioner -------------------
+    @property
+    def usage(self) -> str:
+        for usage, button in self.usage_buttons.items():
+            if button.isChecked():
+                return usage
+        return USAGE_ALL
+
+    def _update_usage(self) -> None:
+        """Vis kun det, der hører til det valgte brug."""
+        usage = self.usage
+        reading = usage != USAGE_DICTATION
+        dictating = usage != USAGE_READ
+        self._tabs.setTabVisible(1, reading)  # Læs op
+        self.messages_box.setVisible(dictating)
+        self.dictation_box.setVisible(dictating)
+        self.prediction.setVisible(usage == USAGE_ALL)
+        self.read_word.setVisible(reading)
+        self.read_sentence.setVisible(reading)
+        self.typing_box.setVisible(reading or usage == USAGE_ALL)
+        self.icon_mic.setVisible(dictating)
+        for widget in (self.icon_screen, self.icon_pdf, self._pdf_note):
+            widget.setVisible(reading)
+        if hasattr(self, "_typing_row"):
+            self._update_typing_status()
 
     def _add_page(self, title: str) -> QVBoxLayout:
         """En ny fane, der kan rulles. Returnerer layoutet, som grupperne lægges i."""
@@ -308,7 +384,14 @@ class SettingsDialog(QDialog):
 
     def _update_typing_status(self) -> None:
         setup = self._hooks.typing_setup
-        wanted = any(box.isChecked() for box in self._typing_boxes)
+        # Kun det, der hører til det valgte brug (fanen kan være skjult, så ikke isVisible)
+        usage = self.usage if hasattr(self, "usage_buttons") else USAGE_ALL
+        allowed = {
+            self.prediction: usage == USAGE_ALL,
+            self.read_word: usage != USAGE_DICTATION,
+            self.read_sentence: usage != USAGE_DICTATION,
+        }
+        wanted = any(box.isChecked() and allowed[box] for box in self._typing_boxes)
         self._typing_row.setVisible(wanted)
         if setup is None or not wanted:
             return
@@ -389,14 +472,16 @@ class SettingsDialog(QDialog):
 
     def collect(self) -> Config:
         cfg = copy.deepcopy(self._original)
+        cfg.usage = self.usage
+        cfg.messages = MESSAGES_SPEAK if self.messages_speak.isChecked() else MESSAGES_SCREEN
         cfg.speed = self.speed.value() / 100
         cfg.use_clipboard_fallback = self.clipboard.isChecked()
         cfg.read_on_select = self.read_on_select.isChecked()
         cfg.read_at_pointer = self.read_at_pointer.isChecked()
         cfg.dictation_enabled = self.dictation.isChecked()
         cfg.dictation_model = str(self.model.currentData() or cfg.dictation_model)
-        if not self.model.currentData():  # ingen talemodel hentet
-            cfg.dictation_enabled = False
+        # Ingen talemodel hentet: diktering forbliver valgt, og Ordhjælp spørger, om
+        # modellen skal hentes, når den starter igen (velkomstguidens side med modeller)
         cfg.prediction_enabled = self.prediction.isChecked()
         cfg.read_word_on_space = self.read_word.isChecked()
         cfg.read_sentence_on_period = self.read_sentence.isChecked()
@@ -412,7 +497,7 @@ class SettingsDialog(QDialog):
         save_config(new)
         hooks.set_clipboard_fallback(new.use_clipboard_fallback)
         if hooks.set_read_on_select is not None:
-            hooks.set_read_on_select(new.read_on_select)
+            hooks.set_read_on_select(new.read_on_select_active)
         hooks.config.view = new.view  # set_icon_visible ser på den valgte visning
         if hooks.set_view is not None and new.view != self._original.view:
             hooks.set_view(new.view)
@@ -427,7 +512,7 @@ class SettingsDialog(QDialog):
         hooks.config.__dict__.update(copy.deepcopy(new).__dict__)
         super().accept()
         if restart:
-            log.info("Genstarter for at skifte talegenkendelse")
+            log.info("Genstarter med de nye indstillinger")
             hooks.restart()
 
     def reject(self) -> None:  # noqa: D102

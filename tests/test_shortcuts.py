@@ -71,3 +71,10 @@ def test_suggestion_popup_shows_keys(app) -> None:
     assert "Esc" in popup.hint.text()
     assert "Højreklik" in popup.hint.text()
     popup.hide()
+
+
+def test_shortcuts_follow_usage(app) -> None:
+    dictate = " ".join(_texts(ShortcutsDialog(Config(usage="diktering"))))
+    assert "Ctrl+Alt+D" in dictate and "Ctrl+Alt+L" not in dictate
+    read = " ".join(_texts(ShortcutsDialog(Config(usage="oplaesning"))))
+    assert "Ctrl+Alt+L" in read and "Ctrl+Alt+D" not in read

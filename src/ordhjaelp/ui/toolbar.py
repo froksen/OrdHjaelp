@@ -23,7 +23,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QPoint, QRect, QSize, Qt, QTimer
 from PySide6.QtGui import QColor, QGuiApplication, QIcon, QMouseEvent, QPainter, QPaintEvent
-from PySide6.QtWidgets import QFrame, QHBoxLayout, QMenu, QToolButton, QWidget
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QMenu, QToolButton, QWidget
 
 from ordhjaelp.ui.shortcuts import shortcut_for
 
@@ -174,6 +174,15 @@ class Toolbar(QWidget):
         self._fold.clicked.connect(lambda: self.set_folded(not self._folded))
         self._tail.append(self._fold)
         self._app_icon = app_icon
+        # En kort besked til eleven (fx fra diktering) vises i selve linjen. Et eget
+        # vindue kan ikke placeres på Wayland, men linjen ligger der, hvor eleven har den.
+        self._message = QLabel(self._frame)
+        self._message.setObjectName("besked")
+        self._message.setVisible(False)
+        self._row.addWidget(self._message)
+        self._message_timer = QTimer(self)
+        self._message_timer.setSingleShot(True)
+        self._message_timer.timeout.connect(self.hide_message)
         for button in self._tail:
             self._row.addWidget(button)
 
@@ -239,6 +248,26 @@ class Toolbar(QWidget):
         if self._placed:
             self._save_timer.start()
 
+    def show_message(self, text: str, msecs: int) -> None:
+        """Vis en besked i linjen i msecs millisekunder (også når linjen er foldet ind)."""
+        self._message.setText(text)
+        self._message.setVisible(True)
+        self._dim_timer.stop()
+        self._set_opacity(1.0)
+        self._shrink()
+        self._message_timer.start(msecs)
+
+    def hide_message(self) -> None:
+        self._message.setVisible(False)
+        self._message.clear()
+        self._shrink()
+        self._dim_timer.start()
+
+    @property
+    def message(self) -> str:
+        """Beskeden, der vises lige nu ("" = ingen)."""
+        return self._message.text() if self._message.isVisibleTo(self) else ""
+
     @property
     def folded(self) -> bool:
         return self._folded
@@ -303,6 +332,7 @@ class Toolbar(QWidget):
                 border: 1px solid {border.name()};
                 border-radius: 12px;
             }}
+            QLabel#besked {{ font-size: 15px; padding: 0 8px; }}
             QToolButton {{ border: none; border-radius: 8px; font-size: 16px; }}
             QToolButton:hover {{ background: rgba(127, 127, 127, 50); }}
             QToolButton:pressed {{ background: rgba(127, 127, 127, 90); }}

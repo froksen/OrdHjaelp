@@ -51,9 +51,7 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
     except BaseException:
         server.close()
         raise
-    model = ensure_voice(cfg.voice, voices_dir())
-    log.info("Indlæser stemmen %s", cfg.voice)
-    tts = PiperEngine(model, speed=cfg.speed)
+    tts = _make_tts(cfg)
     selection = get_selection_provider()
     service = ReadAloudService(
         tts=tts,
@@ -62,15 +60,16 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
         use_clipboard_fallback=cfg.use_clipboard_fallback,
     )
     set_read_on_select = _make_read_on_select(selection, service)
-    if cfg.read_on_select:
+    if cfg.read_on_select_active:
         set_read_on_select(True)
-    dictation = _make_dictation(cfg, service) if cfg.dictation_enabled else None
-    screen = _make_screen_reader(service)
-    pointer = _make_pointer_reader(service) if cfg.read_at_pointer else None
+    # Handlinger som kun brugerfladen kan udføre (fx vise markeringsoverlay eller en besked)
+    ui_actions: dict[str, Callable[..., None]] = {}
+    tell_user = _make_tell_user(cfg, service, ui_actions)
+    dictation = _make_dictation(cfg, service, tell_user) if cfg.dictation_active else None
+    screen = _make_screen_reader(service) if cfg.uses_reading else None
+    pointer = _make_pointer_reader(service) if cfg.read_at_pointer_active else None
     prediction = WordPredictionService(lexicon_path(), learned_words_path())
     prediction.load_in_background()
-    # Handlinger som kun brugerfladen kan udføre (fx vise markeringsoverlay)
-    ui_actions: dict[str, Callable[[], None]] = {}
     restart_requested = threading.Event()
 
     def handle(req: ipc.Request) -> ipc.Response:
@@ -85,7 +84,7 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
             service.stop()
             return {"ok": True}
         if cmd == "forslag":
-            if not cfg.prediction_enabled:  # IBus kører måske kun for at læse op
+            if not cfg.prediction_active:  # IBus kører måske kun for at læse op
                 return {"ok": True, "forslag": []}
             return {"ok": True, "forslag": prediction.suggest(str(req.get("ord", "")))}
         if cmd == "skrevet":  # fra ordforslag: et ord og/eller en sætning er skrevet færdig
@@ -134,6 +133,9 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
             bindings = dict(cfg.hotkeys)
             if dictation is None:
                 bindings.pop("dikter", None)
+            if not cfg.uses_reading:  # kun diktering: ingen genveje til at læse op
+                bindings.pop("laes", None)
+                bindings.pop("stop", None)
             if screen is None:
                 bindings.pop("skaerm", None)
             if pointer is None:
@@ -213,9 +215,7 @@ def _make_read_on_select(selection, service: ReadAloudService) -> Callable[[bool
     return set_enabled
 
 
-def _settings_hooks(
-    cfg: Config, tts: PiperEngine, service: ReadAloudService, restart, set_read_on_select
-):  # noqa: ANN001, ANN202
+def _settings_hooks(cfg: Config, tts, service: ReadAloudService, restart, set_read_on_select):  # noqa: ANN001, ANN202
     try:
         from ordhjaelp.models.store import ModelStore
         from ordhjaelp.ui.settings import SettingsHooks
@@ -261,19 +261,20 @@ def _ensure_models(cfg: Config, ui: bool) -> bool:
         try:
             from PySide6.QtWidgets import QApplication, QDialog
 
-            from ordhjaelp.ui.model_manager import FirstRunDialog, needs_first_run
+            from ordhjaelp.ui.model_manager import needs_first_run
+            from ordhjaelp.ui.welcome import FirstRunDialog
         except ImportError:
             ui = False
     if not ui:
         return True  # uden brugerflade hentes modellerne automatisk, når de bruges
-    if not needs_first_run(store, cfg):
+    if cfg.welcome_done and not needs_first_run(store, cfg):
         return True
     QApplication.instance() or QApplication([])
     try:
         autostart = get_autostart()
     except PlatformNotSupported:
         autostart = None
-    dialog = FirstRunDialog(store, cfg, autostart)
+    dialog = FirstRunDialog(store, cfg, autostart, models_only=cfg.welcome_done)
     return dialog.exec() == QDialog.DialogCode.Accepted
 
 
@@ -281,14 +282,47 @@ def _read_while_typing(cfg: Config, service: ReadAloudService, req: ipc.Request)
     """Læs det netop skrevne op – hvis det er slået til i indstillingerne."""
     sentence = str(req.get("saetning") or "")
     word = str(req.get("ord") or "")
-    if sentence and cfg.read_sentence_on_period:
+    if sentence and cfg.read_sentence_active:
         return service.say(sentence)
-    if word and cfg.read_word_on_space:
+    if word and cfg.read_word_active:
         return service.say(word)
     return False
 
 
-def _make_dictation(cfg: Config, service: ReadAloudService) -> DictationService | None:
+def _make_tts(cfg: Config):  # noqa: ANN202
+    """Stemmen, eller en stum stemme, hvis den ikke skal bruges (og ikke er hentet)."""
+    if not cfg.needs_voice:
+        from ordhjaelp.tts.silent import SilentTTS
+
+        log.info("Kun diktering med beskeder på skærmen: stemmen indlæses ikke")
+        return SilentTTS(cfg.speed)
+    model = ensure_voice(cfg.voice, voices_dir())
+    log.info("Indlæser stemmen %s", cfg.voice)
+    return PiperEngine(model, speed=cfg.speed)
+
+
+def _make_tell_user(
+    cfg: Config, service: ReadAloudService, ui_actions: dict[str, Callable[..., None]]
+) -> Callable[[str], None]:
+    """Giv eleven en besked: læst op eller på skærmen, som valgt i indstillingerne."""
+
+    def tell(message: str) -> None:
+        show = ui_actions.get("besked")  # sættes af knaplinjen/ikonerne
+        if show is not None and not cfg.speaks_messages:
+            show(message)
+        elif cfg.needs_voice:
+            service.say(message)
+        elif show is not None:
+            show(message)
+        else:
+            log.info("Besked til eleven: %s", message)
+
+    return tell
+
+
+def _make_dictation(
+    cfg: Config, service: ReadAloudService, tell_user: Callable[[str], None]
+) -> DictationService | None:
     try:
         from ordhjaelp.audio.cues import Cues
         from ordhjaelp.audio.recorder import Recorder
@@ -301,7 +335,7 @@ def _make_dictation(cfg: Config, service: ReadAloudService) -> DictationService 
             injector=get_text_injector(),
             cues=Cues(),
             before_recording=service.stop,
-            tell_user=service.say,
+            tell_user=tell_user,
         )
     except Exception as exc:  # noqa: BLE001 - oplæsning skal virke, selv hvis diktering ikke gør
         log.warning("Diktering er ikke tilgængelig: %s", exc)
@@ -350,7 +384,7 @@ def _run_tray(
     service: ReadAloudService,
     dictation: DictationService | None,
     screen: ScreenReadService | None,
-    ui_actions: dict[str, Callable[[], None]],
+    ui_actions: dict[str, Callable[..., None]],
     hooks=None,  # noqa: ANN001
     hotkeys: dict[str, str] | None = None,
 ) -> bool:

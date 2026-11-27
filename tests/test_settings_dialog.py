@@ -146,19 +146,63 @@ class _ReadySetup:
 
 
 def test_settings_are_split_into_tabs(app, hooks) -> None:
-    """Fire faner, så der ikke er så meget at overskue ad gangen."""
+    """Flere faner, så der ikke er så meget at overskue ad gangen."""
     h, _calls, _tmp = hooks
     d = SettingsDialog(h)
     titles = [d._tabs.tabText(i) for i in range(d._tabs.count())]
-    assert titles == ["Læs op", "Skriv", "Knapper", "Start og genveje"]
+    assert titles == ["Brug", "Læs op", "Skriv", "Knapper", "Start og genveje"]
 
     def tab_of(widget):
         return next(i for i, (_, c) in enumerate(d._pages) if c.isAncestorOf(widget))
 
-    assert tab_of(d.speed) == tab_of(d.read_at_pointer) == 0
-    assert tab_of(d.dictation) == tab_of(d.prediction) == 1
-    assert tab_of(d.view_toolbar) == tab_of(d.icon_pdf) == 2
-    assert tab_of(d.autostart) == 3
+    assert tab_of(d.usage_buttons["alt"]) == tab_of(d.messages_screen) == 0
+    assert tab_of(d.speed) == tab_of(d.read_at_pointer) == 1
+    assert tab_of(d.dictation) == tab_of(d.prediction) == 2
+    assert tab_of(d.view_toolbar) == tab_of(d.icon_pdf) == 3
+    assert tab_of(d.autostart) == 4
+
+
+def test_usage_hides_what_does_not_belong(app, hooks) -> None:
+    h, _calls, _tmp = hooks
+    d = SettingsDialog(h)
+    assert d.usage == "alt" and d._tabs.isTabVisible(1)
+    d.usage_buttons["diktering"].setChecked(True)
+    assert not d._tabs.isTabVisible(1)  # Læs op
+    assert d.dictation_box.isVisibleTo(d.dictation_box.parentWidget())
+    assert not d.typing_box.isVisibleTo(d.typing_box.parentWidget())
+    assert not d.icon_screen.isVisibleTo(d.icon_screen.parentWidget())
+    assert d.icon_mic.isVisibleTo(d.icon_mic.parentWidget())
+    assert d.messages_box.isVisibleTo(d.messages_box.parentWidget())
+    d.usage_buttons["oplaesning"].setChecked(True)
+    assert d._tabs.isTabVisible(1)
+    assert not d.dictation_box.isVisibleTo(d.dictation_box.parentWidget())
+    assert not d.prediction.isVisibleTo(d.prediction.parentWidget())
+    assert d.read_word.isVisibleTo(d.read_word.parentWidget())
+    assert not d.icon_mic.isVisibleTo(d.icon_mic.parentWidget())
+    assert not d.messages_box.isVisibleTo(d.messages_box.parentWidget())
+
+
+def test_changing_usage_saves_and_restarts(app, hooks) -> None:
+    h, calls, tmp = hooks
+    h.config.read_on_select = True
+    d = SettingsDialog(h)
+    d.usage_buttons["diktering"].setChecked(True)
+    d.messages_screen.setChecked(True)
+    d.accept()
+    saved = Config.from_toml((tmp / "config.toml").read_text())
+    assert saved.usage == "diktering" and saved.messages == "skaerm"
+    assert saved.read_on_select  # fravalgt, men gemt til senere
+    assert calls["restart"] == 1
+    assert h.config.usage == "diktering"
+
+
+def test_needs_restart_on_usage_and_voice() -> None:
+    assert needs_restart(Config(), Config(usage="oplaesning"))
+    # Kun diktering: skiftet fra beskeder på skærmen til oplæst kræver stemmen
+    a = Config(usage="diktering", messages="skaerm")
+    assert needs_restart(a, Config(usage="diktering", messages="oplaes"))
+    # Med læs op er stemmen der i forvejen: beskederne skifter uden genstart
+    assert not needs_restart(Config(messages="skaerm"), Config(messages="oplaes"))
 
 
 @pytest.mark.parametrize("typing", [False, True])
