@@ -20,6 +20,9 @@ Plasma**.
 - **Offline:** stemme, talegenkendelse og ordforslag kører på computeren – intet sendes ud
 - **Enkelt:** en lille knaplinje på skærmen (eller ikoner ved uret), ét klik pr. funktion.
   Indstillinger er gemt væk til voksne
+- **Windows og Linux:** de samme funktioner på begge
+
+![Ordhjælp på 30 sekunder: læs op, diktering, ordforslag og læs fra skærmen](docs/billeder/demo.gif)
 
 ## Funktioner
 
@@ -35,6 +38,8 @@ Plasma**.
 | 📄 | **Gør en PDF søgbar** | Klik på den **orange knap**, og vælg en scannet PDF. Der kommer en kopi, hvor teksten kan markeres og læses op. Den gamle PDF bliver ikke ændret |
 
 ### Knaplinjen
+
+![Knaplinjen: læs op (blå), diktering (grøn), læs fra skærmen (lilla), gør en PDF søgbar (orange), menuen ⋯ og fold ind ‹](docs/billeder/knaplinje.png)
 
 Knapperne ligger i en lille knaplinje nederst til højre på skærmen, lige over
 opgavelinjen. Træk i prikkerne (⠿) for at flytte den, og klik på **‹** for at folde den
@@ -56,6 +61,8 @@ Ordforslag forstår typiske fejl hos yngre elever og ordblinde:
 | pluseli | **pludselig** |
 | løda | **lørdag** |
 | Køben | **København** |
+
+<img src="docs/billeder/ordforslag.png" width="205" alt="Forslagsvinduet ved markøren: F1 skole, F2 skolen, F3 skoler, F4 skov">
 
 - **↓ / ↑** vælger et forslag – det valgte **læses op**
 - **Tab** eller **mellemrum** tager det valgte forslag. **F1–F5** eller klik vælger direkte
@@ -103,57 +110,19 @@ Klik på **⋯** i knaplinjen (eller højreklik på det blå ikon ved uret, hvis
 | **Knapper** | Knaplinje eller ikoner ved uret, og hvilke knapper der vises |
 | **Start og genveje** | Autostart ved login og oversigt over genvejene |
 
-Indstillingerne gemmes i `~/.config/ordhjaelp/config.toml` på Linux og i
-`%LOCALAPPDATA%\ordhjaelp\ordhjaelp\config.toml` på Windows.
+<img src="docs/billeder/indstillinger.png" width="520" alt="Indstillingerne, fanen Brug: læse op, diktere eller begge dele, og beskeder fra diktering">
 
-Ordhjælp findes til **Fedora Linux med KDE Plasma** og til **Windows**.
+Indstillingerne gemmes i `%LOCALAPPDATA%\ordhjaelp\ordhjaelp\config.toml` på Windows og i
+`~/.config/ordhjaelp/config.toml` på Linux.
 
-## Installation på Fedora KDE
+## Installation
 
-Hent `ordhjaelp-<version>-1.fc<NN>.x86_64.rpm` under
-[Releases](https://github.com/froksen/OrdHjaelp/releases), og installér den:
+Ordhjælp findes til **Windows** og til **Fedora Linux med KDE Plasma**. Begge
+udgaver har de samme funktioner.
 
-```bash
-sudo dnf install ./ordhjaelp-*.x86_64.rpm
-```
+### Windows
 
-RPM'en medbringer sin egen Python 3.13 og alle Python-pakker i `/opt/ordhjaelp`, og den
-trækker systemværktøjerne (Tesseract, Hunspell, IBus, wl-clipboard m.fl.) ind via dnf.
-Start **Ordhjælp** fra programmenuen.
-
-### Første start
-
-Ved første start åbner en **velkomstguide** i tre trin:
-
-1. **Hvad skal Ordhjælp hjælpe med?** *Læse op*, *Diktere* eller *Begge dele* (alle
-   funktioner). Ordhjælp viser kun de knapper, genveje og indstillinger, der hører til
-   valget. Ordforslag hører til *Begge dele*.
-2. **Indstillinger:** de vigtigste til valget, fx taletempo, læs ved markering,
-   ordforslag, knaplinje eller ikoner ved uret og start ved login. Ved diktering vælger
-   man, om beskeder som "Jeg hørte ikke noget" skal **læses op** eller **vises på
-   skærmen**.
-3. **Sprogmodeller:** kun det, valget kræver, er sat flueben ved. Med *Begge dele* er
-   det den danske stemme og den hurtige danske talegenkendelse (ca. 310 MB). Med
-   *Læse op* er det kun stemmen (63 MB). Med *Diktere* og beskeder på skærmen er det
-   kun talegenkendelsen.
-
-Modellerne hentes **én gang** med statuslinje og virker derefter uden internet. Flere
-kan altid hentes, og ubrugte slettes, under *Indstillinger → Sprogmodeller …*.
-Valget af brug kan ændres under *Indstillinger → Brug*. Det fravalgte bliver gemt og
-kommer igen, hvis man vælger det igen. Mangler der en sprogmodel til det nye valg,
-spørger Ordhjælp, om den skal hentes, når den starter igen.
-
-Derefter:
-
-- KDE spørger om lov til **tastaturgenveje**, **tastaturadgang** (til diktering) og
-  **skærmbilleder** (til læs fra skærmen) – godkend dem én gang.
-- **Ordforslag** kræver, at IBus er valgt som indtastningsmetode:
-  *Systemindstillinger → Tastatur → Virtuelt tastatur → **IBus Wayland***.
-  Ordhjælp opdager det af sig selv.
-
-## Installation på Windows (prøveudgave)
-
-Der er tre måder. Ingen af dem kræver **administrator**, og begge installerer kun for den
+Der er tre måder. Ingen af dem kræver **administrator**, og alle installerer kun for den
 bruger, der er logget ind (i `%LOCALAPPDATA%\Programs\Ordhjaelp`).
 
 **1. Installationsprogrammet:** hent **Ordhjaelp-<version>-Setup.exe** under
@@ -187,19 +156,68 @@ køres på mange computere på én gang.
 
 - Hunspell (dansk ordbog) og Tesseract (læs fra skærmen) følger med. Der skal ikke
   installeres andet.
-- Første gang hentes de sprogmodeller, der skal bruges (højst ca. 310 MB, se
-  [Første start](#første-start)).
 - Ordhjælp er ikke signeret endnu. Windows kan derfor vise "Windows beskyttede din pc".
   Klik på **Flere oplysninger** og derefter **Kør alligevel**. Er Smart App Control slået til,
   blokerer Windows installationsprogrammet. Brug så PowerShell-kommandoen.
+- **Microsoft Store** er på vej: pakken er klar, men navnet er ikke reserveret endnu.
 
-| Virker på Windows | Sådan |
+### Fedora KDE
+
+Hent `ordhjaelp-<version>-1.fc<NN>.x86_64.rpm` under
+[Releases](https://github.com/froksen/OrdHjaelp/releases), og installér den:
+
+```bash
+sudo dnf install ./ordhjaelp-*.x86_64.rpm
+```
+
+RPM'en medbringer sin egen Python 3.13 og alle Python-pakker i `/opt/ordhjaelp`, og den
+trækker systemværktøjerne (Tesseract, Hunspell, IBus, wl-clipboard m.fl.) ind via dnf.
+Start **Ordhjælp** fra programmenuen.
+
+Efter velkomstguiden (se [Første start](#første-start)):
+
+- KDE spørger om lov til **tastaturgenveje**, **tastaturadgang** (til diktering) og
+  **skærmbilleder** (til læs fra skærmen) – godkend dem én gang.
+- **Ordforslag** kræver, at IBus er valgt som indtastningsmetode:
+  *Systemindstillinger → Tastatur → Virtuelt tastatur → **IBus Wayland***.
+  Ordhjælp opdager det af sig selv.
+
+## Første start
+
+Ved første start åbner en **velkomstguide** i tre trin. Den er ens på Windows og Linux.
+
+<img src="docs/billeder/velkomst.png" width="440" alt="Velkomstguiden: hvad skal Ordhjælp hjælpe dig med? Læse op, diktere eller begge dele">
+
+1. **Hvad skal Ordhjælp hjælpe med?** *Læse op*, *Diktere* eller *Begge dele* (alle
+   funktioner). Ordhjælp viser kun de knapper, genveje og indstillinger, der hører til
+   valget. Ordforslag hører til *Begge dele*.
+2. **Indstillinger:** de vigtigste til valget, fx taletempo, læs ved markering,
+   ordforslag, knaplinje eller ikoner ved uret og start ved login. Ved diktering vælger
+   man, om beskeder som "Jeg hørte ikke noget" skal **læses op** eller **vises på
+   skærmen**.
+3. **Sprogmodeller:** kun det, valget kræver, er sat flueben ved. Med *Begge dele* er
+   det den danske stemme og den hurtige danske talegenkendelse (ca. 310 MB). Med
+   *Læse op* er det kun stemmen (63 MB). Med *Diktere* og beskeder på skærmen er det
+   kun talegenkendelsen.
+
+Modellerne hentes **én gang** med statuslinje og virker derefter uden internet. Flere
+kan altid hentes, og ubrugte slettes, under *Indstillinger → Sprogmodeller …*.
+Valget af brug kan ændres under *Indstillinger → Brug*. Det fravalgte bliver gemt og
+kommer igen, hvis man vælger det igen. Mangler der en sprogmodel til det nye valg,
+spørger Ordhjælp, om den skal hentes, når den starter igen.
+
+## Detaljer for Windows
+
+Funktionerne er de samme på Windows og Linux, men de bruger hvert styresystems egne
+værktøjer. Det, der gælder for Linux, står under [Fedora KDE](#fedora-kde),
+[Læs under musen](#læs-under-musen) og [Opbygning](#opbygning).
+
+| På Windows | Sådan |
 |---|---|
 | Læs op | Den markerede tekst hentes via UI Automation (Windows' tilgængelighed), så udklipsholderen ikke røres. Understøtter programmet ikke det, bruges Ctrl+C, og det, der lå i udklipsholderen, lægges tilbage bagefter. Aldrig Ctrl+C i terminaler |
 | Diktering | Teksten skrives ind tegn for tegn, så æ, ø og å virker på alle tastaturer |
-| Læs fra skærmen | Tesseract findes også, når det ikke ligger i PATH |
+| Læs fra skærmen | Tesseract følger med installationen |
 | Genveje og autostart | Genvejene ændres under `[genveje]` i `%LOCALAPPDATA%\ordhjaelp\ordhjaelp\config.toml` |
-| Sprogmodeller | Velkomstguiden henter de nødvendige modeller første gang. De kan hentes og slettes under indstillingerne |
 | Ordforslag | Forslagene vises i et lille vindue ved markøren. Vælg med F1–F5, med musen eller med ↓ ↑ og Tab. Der skal ikke sættes noget op i Windows |
 | Læs mens du skriver | Ordet læses ved mellemrum og sætningen ved punktum, ! og ? |
 | Læs ved markering | Træk med musen, dobbeltklik (et ord), trippelklik (en linje) eller Shift+piletaster, så læses det markerede op |
@@ -223,8 +241,9 @@ Bemærk: når Ctrl+C bruges, kan udklipsholderens historik (Win+V) vise den teks
 | `ordhjaelp skaerm` | Læs tekst fra et udsnit af skærmen |
 | `ordhjaelp laes-ord` / `laes-saetning` / `laes-herfra` | Læs ordet, sætningen eller herfra under musen |
 | `ordhjaelp sammenlign-modeller` | Optag en sætning og se, hvad hver talemodel hører – godt til at vælge model ud fra elevens egen stemme |
+| `ordhjaelp hent-stemme` | Henter den danske stemme (ellers sker det i velkomstguiden) |
 | `ordhjaelp status` | Viser om Ordhjælp kører |
-| `ordhjaelp installer [--autostart]` / `afinstaller` | Menupunkt og autostart for brugeren |
+| `ordhjaelp installer [--autostart]` / `afinstaller` | Menupunkt og autostart for brugeren (ikke i Microsoft Store-udgaven, dér klarer Windows det) |
 
 ## Modeller og data
 
@@ -327,6 +346,14 @@ Windows lokalt (kræver Inno Setup 6, og MSYS2 for at få Hunspell og Tesseract 
 ```powershell
 powershell -File packaging\windows\build-installer.ps1                            # Setup.exe og zip-filen i dist\
 powershell -File packaging\windows\build-installer.ps1 -SkipInstaller -NoTools   # kun dist\Ordhjaelp\
+powershell -File packaging\windows\build-msix.ps1                                 # MSIX til Microsoft Store
+```
+
+**Skærmbillederne og demoen** i README laves med Ordhjælps rigtige vinduer, uden at de
+vises på skærmen. Kør scriptet igen, når brugerfladen ændres:
+
+```bash
+uv run --with pillow python scripts/readme_billeder.py   # gemmer i docs/billeder/
 ```
 
 **Hjælp med ordforslag:** Den bedste måde at gøre ordforslagene bedre på er rigtige
@@ -335,20 +362,22 @@ stavefejl fra elever. Tilføj dem til [`tests/ordmotor/fejlkorpus.tsv`](tests/or
 
 ## Status
 
-Ordhjælp er under udvikling og afprøves på Windows og Fedora KDE Plasma (Wayland).
-Windows-udgaven er stadig en prøveudgave.
+Ordhjælp bruges og udvikles på Windows og Fedora KDE Plasma (Wayland). De to udgaver
+har de samme funktioner, og testene kører automatisk på begge styresystemer ved hver
+ændring.
 
-- [x] Læs op, diktering, læs fra skærmen
-- [x] Ordforslag med fonetisk matching, læs mens du skriver
-- [x] Indstillinger, autostart, RPM
-- [x] Velkomstvindue ved første start: vælg og hent sprogmodeller; administrér dem i indstillingerne
-- [ ] Microsoft Store: MSIX-pakken bygges og afprøves i CI. Navnet er ikke reserveret endnu (se [packaging/windows/store](packaging/windows/store/README.md))
-- [x] Velkomstguide: vælg læse op, diktere eller begge dele, de vigtigste indstillinger og kun de nødvendige sprogmodeller
-- [x] Windows: læs op, diktering, læs fra skærmen, genveje, autostart (prøveudgave)
-- [x] Windows: sprogmodeller, ordforslag, læs mens du skriver (prøveudgave)
-- [x] Windows: installer uden administrator (prøveudgave)
-- [x] Windows: læs ved markering, læs under musen (UI Automation, prøveudgave)
-- [ ] Windows: signeret installer
+- [x] Læs op, diktering, læs fra skærmen, gør en PDF søgbar
+- [x] Ordforslag med lydret stavning, læs mens du skriver
+- [x] Læs ved markering og læs under musen
+- [x] Velkomstguide: vælg læse op, diktere eller begge dele, de vigtigste indstillinger og
+  kun de nødvendige sprogmodeller
+- [x] Indstillinger, genveje og start ved login
+- [x] Windows: installationsprogram og PowerShell-installation uden administrator
+- [x] Fedora: RPM-pakke
+- [ ] winget: venter på godkendelse hos Microsoft
+- [ ] Microsoft Store: pakken bygges og afprøves automatisk. Navnet er ikke reserveret
+  endnu (se [packaging/windows/store](packaging/windows/store/README.md))
+- [ ] Windows: signeret installationsprogram
 - [ ] macOS
 
 ## Forfattere
