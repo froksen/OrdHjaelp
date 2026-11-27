@@ -264,9 +264,11 @@ def test_pdf_button_is_shown_by_default_and_opens_pdf_ocr(app, monkeypatch) -> N
 def test_pdf_button_can_be_hidden_and_shown_in_tray_view(app) -> None:
     tray, *_ = make_tray(VIEW_TRAY)
     assert tray.pdf_icon.isVisible()
+    assert tray._act_pdf.isVisible()  # menupunktet følger knappen
     tray.set_icon_visible("pdf", False)
     assert not tray.pdf_icon.isVisible()
     assert tray.toolbar.buttons["pdf"].isHidden()
+    assert not tray._act_pdf.isVisible()
 
 
 def test_fold_and_unfold_resizes_the_window_itself(app) -> None:
