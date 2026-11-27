@@ -20,6 +20,23 @@ VIEW_TOOLBAR = "knaplinje"
 VIEW_TRAY = "ikoner"
 VIEWS = (VIEW_TOOLBAR, VIEW_TRAY)
 
+# Hvad Ordhjælp bruges til. Vælges ved første start og kan ændres i indstillingerne.
+# Det fravalgte bliver ikke slettet: vælger man "alt" igen, er de gamle valg der stadig.
+USAGE_ALL = "alt"  # alle funktioner
+USAGE_READ = "oplaesning"  # kun læs op (også læs fra skærmen, PDF og læs mens du skriver)
+USAGE_DICTATION = "diktering"  # kun diktering
+USAGES = (USAGE_ALL, USAGE_READ, USAGE_DICTATION)
+
+# Beskeder til eleven fra diktering (fx "Jeg hørte ikke noget"): læst op eller på skærmen.
+# Læst op kræver stemmen. På skærmen kan man med kun diktering slippe for at hente den.
+MESSAGES_SPEAK = "oplaes"
+MESSAGES_SCREEN = "skaerm"
+MESSAGES = (MESSAGES_SPEAK, MESSAGES_SCREEN)
+
+# Knapperne, og hvilken slags brug de hører til
+READING_BUTTONS = ("laes", "skaerm", "pdf")
+DICTATION_BUTTONS = ("dikter",)
+
 
 def config_dir() -> Path:
     return Path(user_config_dir(APP_NAME))
@@ -74,11 +91,68 @@ class Config:
         default_factory=lambda: {"dikter": True, "skaerm": True, "pdf": True}
     )
     view: str = VIEW_TOOLBAR
+    usage: str = USAGE_ALL
+    messages: str = MESSAGES_SPEAK
+    # Har eleven været gennem velkomstguiden? Nye brugere: nej. Gamle indstillingsfiler
+    # uden [brug] er fra før guiden fandtes, og de brugere skal ikke se den igen.
+    welcome_done: bool = False
+
+    # -- det, der faktisk er slået til, når brugen er valgt ---------------------
+    @property
+    def uses_reading(self) -> bool:
+        return self.usage != USAGE_DICTATION
+
+    @property
+    def uses_dictation(self) -> bool:
+        return self.usage != USAGE_READ
+
+    @property
+    def dictation_active(self) -> bool:
+        return self.dictation_enabled and self.uses_dictation
+
+    @property
+    def prediction_active(self) -> bool:
+        """Ordforslag hører kun med, når alle funktioner er valgt."""
+        return self.prediction_enabled and self.usage == USAGE_ALL
+
+    @property
+    def read_on_select_active(self) -> bool:
+        return self.read_on_select and self.uses_reading
+
+    @property
+    def read_at_pointer_active(self) -> bool:
+        return self.read_at_pointer and self.uses_reading
+
+    @property
+    def read_word_active(self) -> bool:
+        return self.read_word_on_space and self.uses_reading
+
+    @property
+    def read_sentence_active(self) -> bool:
+        return self.read_sentence_on_period and self.uses_reading
+
+    @property
+    def speaks_messages(self) -> bool:
+        """Læses beskeder fra diktering op (ellers vises de på skærmen)?"""
+        return self.messages == MESSAGES_SPEAK
+
+    @property
+    def needs_voice(self) -> bool:
+        """Skal stemmen hentes? Kun diktering med beskeder på skærmen klarer sig uden."""
+        return self.uses_reading or self.speaks_messages
+
+    def button_allowed(self, name: str) -> bool:
+        """Hører knappen med til den valgte brug?"""
+        if name in DICTATION_BUTTONS:
+            return self.uses_dictation
+        if name in READING_BUTTONS:
+            return self.uses_reading
+        return True
 
     @property
     def typing_help_enabled(self) -> bool:
         """Ordforslag eller læs mens du skriver – begge kræver tastaturdelen (IBus på Linux)."""
-        return self.prediction_enabled or self.read_word_on_space or self.read_sentence_on_period
+        return self.prediction_active or self.read_word_active or self.read_sentence_active
 
     @classmethod
     def from_toml(cls, text: str) -> Config:
@@ -108,6 +182,15 @@ class Config:
         cfg.show_icons.update({str(k): bool(v) for k, v in icons.items()})
         view = str(raw.get("visning", {}).get("knapper", cfg.view))
         cfg.view = view if view in VIEWS else VIEW_TOOLBAR
+        usage = raw.get("brug", {})
+        cfg.usage = str(usage.get("funktioner", cfg.usage))
+        if cfg.usage not in USAGES:
+            cfg.usage = USAGE_ALL
+        cfg.messages = str(usage.get("beskeder", cfg.messages))
+        if cfg.messages not in MESSAGES:
+            cfg.messages = MESSAGES_SPEAK
+        # Uden [brug] er filen fra før velkomstguiden: den er der ikke brug for igen
+        cfg.welcome_done = bool(usage.get("velkommen_vist", "brug" not in raw))
         return cfg
 
     def to_toml(self) -> str:
@@ -124,6 +207,16 @@ class Config:
         return f"""\
 # Ordhjælp – indstillinger
 # Kan også ændres via højreklik på det blå ikon → Indstillinger.
+
+[brug]
+# Hvad Ordhjælp bruges til: "alt" (alle funktioner), "oplaesning" (kun læs op)
+# eller "diktering" (kun diktering). Det fravalgte gemmes og kommer igen med "alt".
+funktioner = {s(self.usage)}
+# Beskeder fra diktering (fx "Jeg hørte ikke noget"): "oplaes" (læses op med stemmen)
+# eller "skaerm" (vises på skærmen)
+beskeder = {s(self.messages)}
+# Velkomstguiden vises ved første start
+velkommen_vist = {b(self.welcome_done)}
 
 [oplaesning]
 # Piper-stemme. Se https://huggingface.co/rhasspy/piper-voices

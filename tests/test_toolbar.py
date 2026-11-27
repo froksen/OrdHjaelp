@@ -46,10 +46,10 @@ class FakeScreen:
     pass
 
 
-def make_tray(view=VIEW_TOOLBAR, icons=None):
+def make_tray(view=VIEW_TOOLBAR, icons=None, usage="alt", ui_actions=None):
     from ordhjaelp.ui.tray import TrayApp
 
-    cfg = Config()
+    cfg = Config(usage=usage)
     cfg.view = view
     if icons:
         cfg.show_icons.update(icons)
@@ -62,7 +62,8 @@ def make_tray(view=VIEW_TOOLBAR, icons=None):
         restart=lambda: None,
     )
     service, dictation = FakeService(), FakeService()
-    tray = TrayApp(service, dictation, FakeScreen(), {}, hooks, Config().hotkeys)
+    actions = {} if ui_actions is None else ui_actions
+    tray = TrayApp(service, dictation, FakeScreen(), actions, hooks, Config().hotkeys)
     tray.set_view(view)
     return tray, service, dictation, hooks
 
@@ -284,3 +285,50 @@ def test_fold_and_unfold_resizes_the_window_itself(app) -> None:
     assert not bar.folded and bar.size() == wide
     assert all(not b.isHidden() for b in bar.buttons.values())
     bar.hide()
+
+
+# -- kun læs op, kun diktering ----------------------------------------------------
+def _shown(tray, name):
+    return tray.toolbar.buttons[name].isVisibleTo(tray.toolbar)
+
+
+def test_dictation_only_shows_just_the_microphone(app) -> None:
+    tray, service, *_ = make_tray(usage="diktering")
+    assert _shown(tray, "dikter")
+    assert not any(_shown(tray, n) for n in ("laes", "skaerm", "pdf"))
+    assert not tray._act_read.isVisible() and not tray._act_stop.isVisible()
+    tray.set_icon_visible("pdf", True)  # fx fra indstillingerne: hører ikke til brugen
+    assert not _shown(tray, "pdf")
+    tray.set_view(VIEW_TRAY)
+    assert tray.mic.isVisible() and not tray.screen_icon.isVisible()
+    assert not tray.pdf_icon.isVisible()
+    assert tray.tray.isVisible()  # det blå ikon har menuen
+    tray.toolbar.hide()
+
+
+def test_read_only_hides_the_microphone(app) -> None:
+    tray, *_ = make_tray(usage="oplaesning")
+    assert _shown(tray, "laes") and _shown(tray, "skaerm")
+    assert not _shown(tray, "dikter")
+    tray.toolbar.hide()
+
+
+def test_message_is_shown_in_the_toolbar(app) -> None:
+    actions = {}
+    tray, *_ = make_tray(ui_actions=actions)
+    width = tray.toolbar.width()
+    actions["besked"]("Jeg hørte ikke noget")
+    QApplication.processEvents()
+    assert tray.toolbar.message == "Jeg hørte ikke noget"
+    assert tray.toolbar.width() > width  # linjen bliver bredere, så teksten kan ses
+    tray.toolbar.hide_message()
+    assert tray.toolbar.message == "" and tray.toolbar.width() == width
+    tray.toolbar.hide()
+
+
+def test_message_is_shown_while_folded(app) -> None:
+    tray, *_ = make_tray()
+    tray.toolbar.set_folded(True)
+    tray.show_message("Noget gik galt")
+    assert tray.toolbar.message == "Noget gik galt"
+    tray.toolbar.hide()

@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ordhjaelp.config import Config
+from ordhjaelp.config import USAGE_ALL, Config
 
 # Rækkefølge og forklaring på genvejene (handling i config.toml → hvad den gør)
 GLOBAL_SHORTCUTS: list[tuple[str, str]] = [
@@ -115,6 +115,13 @@ def _grid(rows: list[tuple[str, str, bool]]) -> QWidget:
     return widget
 
 
+def _belongs_to_usage(cfg: Config, action: str) -> bool:
+    """Hører genvejen med til det, Ordhjælp bruges til (kun læs op, kun diktering)?"""
+    if action == "dikter":
+        return cfg.uses_dictation
+    return cfg.uses_reading
+
+
 class ShortcutsDialog(QDialog):
     def __init__(self, cfg: Config, parent=None) -> None:  # noqa: ANN001
         super().__init__(parent)
@@ -127,9 +134,9 @@ class ShortcutsDialog(QDialog):
         pointer_off = False
         for action, text in GLOBAL_SHORTCUTS:
             key = shortcut_for(cfg.hotkeys, action)
-            if not key:
+            if not key or not _belongs_to_usage(cfg, action):
                 continue
-            active = action not in POINTER_ACTIONS or cfg.read_at_pointer
+            active = action not in POINTER_ACTIONS or cfg.read_at_pointer_active
             if not active:
                 pointer_off = True
                 text += " *"
@@ -144,6 +151,7 @@ class ShortcutsDialog(QDialog):
         box = QGroupBox("Når der vises ordforslag")
         col = QVBoxLayout(box)
         col.addWidget(_grid([(key, text, True) for key, text in SUGGESTION_KEYS]))
+        box.setVisible(cfg.usage == USAGE_ALL)  # ordforslag hører kun til alle funktioner
         layout.addWidget(box)
 
         box = QGroupBox("Med musen")
@@ -153,15 +161,16 @@ class ShortcutsDialog(QDialog):
             (
                 "Dobbeltklik",
                 "Læs ordet op, når »Læs ved markering« er slået til",
-                cfg.read_on_select,
+                cfg.read_on_select_active,
             ),
             (
                 "Trippelklik",
                 "Læs linjen op, når »Læs ved markering« er slået til",
-                cfg.read_on_select,
+                cfg.read_on_select_active,
             ),
         ]
         col.addWidget(_grid(mouse_rows))
+        box.setVisible(cfg.uses_reading)
         layout.addWidget(box)
 
         help_label = QLabel(change_help())

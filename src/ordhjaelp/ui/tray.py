@@ -25,6 +25,7 @@ from ordhjaelp.services.screen_read import ScreenReadService
 log = logging.getLogger(__name__)
 
 TOOLTIP_IDLE = "Ordhjælp – markér tekst og klik her for at få den læst op"
+TOOLTIP_MENU = "Ordhjælp – klik for indstillinger, genveje og luk"
 TOOLTIP_SPEAKING = "Ordhjælp – klik for at stoppe"
 MIC_TOOLTIPS = {
     DictationState.IDLE: "Diktér – klik og tal. Klik igen, når du er færdig",
@@ -37,6 +38,8 @@ MIC_ICONS = {
     DictationState.TRANSCRIBING: "ordhjaelp-mic-wait",
 }
 
+
+MESSAGE_MS = 6000  # så længe en besked vises
 
 PDF_TOOLTIP = "Gør en scannet PDF søgbar, så teksten kan markeres og læses op"
 
@@ -56,6 +59,7 @@ class _Bridge(QObject):
 
     speaking_changed = Signal(bool)
     dictation_changed = Signal(object)
+    message = Signal(str)  # en besked til eleven, fx fra diktering
     screen_requested = Signal()
     screenshot_ready = Signal(object)  # bytes eller None
     screen_done = Signal()
@@ -67,7 +71,7 @@ class TrayApp:
         service: ReadAloudService,
         dictation: DictationService | None = None,
         screen: ScreenReadService | None = None,
-        ui_actions: dict[str, Callable[[], None]] | None = None,
+        ui_actions: dict[str, Callable[..., None]] | None = None,
         settings=None,  # noqa: ANN001 - SettingsHooks (importeres først ved brug)
         hotkeys: dict[str, str] | None = None,
     ) -> None:
@@ -75,6 +79,8 @@ class TrayApp:
         from ordhjaelp.ui.shortcuts import shortcut_for, with_shortcut
 
         self._hotkeys = hotkeys
+        # Kun diktering: ingen knapper eller menupunkter til at læse op
+        self._reading = settings is None or settings.config.uses_reading
         self.app = QApplication.instance() or QApplication(sys.argv)
         self.app.setApplicationName("Ordhjælp")
         self.app.setDesktopFileName(APP_ID)
@@ -88,6 +94,8 @@ class TrayApp:
         self.tray = QSystemTrayIcon(self._icon_idle)
         read_key = shortcut_for(hotkeys, "laes")
         self._tooltip_idle = TOOLTIP_IDLE + (f" (eller tryk {read_key})" if read_key else "")
+        if not self._reading:
+            self._tooltip_idle = TOOLTIP_MENU
         self.tray.setToolTip(self._tooltip_idle)
         self.tray.activated.connect(self._on_activated)
 
@@ -101,11 +109,15 @@ class TrayApp:
         act_quit.triggered.connect(self.app.quit)
         menu.addAction(self._act_read)
         menu.addAction(self._act_stop)
+        self._act_read.setVisible(self._reading)
+        self._act_stop.setVisible(self._reading)
         menu.addSeparator()
         # Slået fra som standard – slås til i indstillingerne
         self._act_pdf = QAction("Gør en PDF søgbar …", menu)
         self._act_pdf.triggered.connect(self.open_pdf_ocr)
-        self._act_pdf.setVisible(bool(settings and settings.config.pdf_ocr_enabled))
+        self._act_pdf.setVisible(
+            bool(settings and settings.config.pdf_ocr_enabled) and self._reading
+        )
         menu.addAction(self._act_pdf)
         self._pdf_jobs: list = []  # behold referencer, mens de kører
         act_keys = QAction("Genveje …", menu)
@@ -123,7 +135,7 @@ class TrayApp:
         if settings is not None:
             settings.set_icon_visible = self.set_icon_visible
             settings.set_view = self.set_view
-            settings.set_pdf_ocr = self._act_pdf.setVisible
+            settings.set_pdf_ocr = lambda on: self._act_pdf.setVisible(on and self._reading)
             act_settings = QAction("Indstillinger …", menu)
             act_settings.triggered.connect(self.open_settings)
             menu.addAction(act_settings)
@@ -138,6 +150,9 @@ class TrayApp:
         self._bridge = _Bridge()
         self._bridge.speaking_changed.connect(self._set_speaking)
         service.add_listener(self._bridge.speaking_changed.emit)
+        self._bridge.message.connect(self.show_message)
+        if ui_actions is not None:
+            ui_actions["besked"] = self._bridge.message.emit  # kaldes fra baggrundstråde
 
         # Mikrofon-ikon (eget ikon ved uret, så det er let at forstå for børn)
         self.mic: QSystemTrayIcon | None = None
@@ -208,6 +223,7 @@ class TrayApp:
         self._read_tip = tooltip_with_key("Læs markeret tekst op", hotkeys, "laes")
         self._stop_tip = tooltip_with_key("Stop oplæsningen", hotkeys, "stop")
         bar.add_button("laes", self._icon_idle, self._read_tip, self._service.toggle)
+        bar.set_button_visible("laes", self._reading)
         if self.mic is not None:
             self._mic_tips = {
                 st: tooltip_with_key(tip, hotkeys, "dikter") for st, tip in MIC_TOOLTIPS.items()
@@ -252,7 +268,19 @@ class TrayApp:
     def _on_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:
         # Kun enkeltklik: et dobbeltklik ville ellers starte og stoppe med det samme
         if reason == QSystemTrayIcon.ActivationReason.Trigger:
-            self._service.toggle()
+            if self._reading:
+                self._service.toggle()
+            else:  # kun diktering: der er ikke noget at læse op, så vis menuen
+                from PySide6.QtGui import QCursor
+
+                self._menu.popup(QCursor.pos())
+
+    def show_message(self, text: str) -> None:
+        """Vis en kort besked: i knaplinjen eller som en boble ved uret."""
+        if self._view == VIEW_TRAY and self.tray.isVisible():
+            self.tray.showMessage("Ordhjælp", text, self._icon_idle, MESSAGE_MS)
+        else:
+            self.toolbar.show_message(text, MESSAGE_MS)
 
     # -- indstillinger --------------------------------------------------
     def open_settings(self) -> None:
@@ -331,9 +359,14 @@ class TrayApp:
         self._pdf_jobs.append(job)
         job.start()
 
+    def _allowed(self, name: str) -> bool:
+        """Hører knappen med til det, Ordhjælp bruges til (kun læs op, kun diktering)?"""
+        return self._settings is None or self._settings.config.button_allowed(name)
+
     def set_icon_visible(self, name: str, visible: bool) -> None:
         if self._settings is not None:
             self._settings.config.show_icons[name] = visible
+        visible = visible and self._allowed(name)
         icon = {"dikter": self.mic, "skaerm": self.screen_icon, "pdf": self.pdf_icon}.get(name)
         if icon is not None:
             icon.setVisible(visible and self._view == VIEW_TRAY)
@@ -353,9 +386,10 @@ class TrayApp:
             ("skaerm", self.screen_icon),
             ("pdf", self.pdf_icon),
         ):
+            shown = icons.get(name, True) and self._allowed(name)
             if icon is not None:
-                icon.setVisible(view == VIEW_TRAY and icons.get(name, True))
-            self.toolbar.set_button_visible(name, icons.get(name, True))
+                icon.setVisible(view == VIEW_TRAY and shown)
+            self.toolbar.set_button_visible(name, shown)
         self.tray.setVisible(view == VIEW_TRAY)
         if view == VIEW_TOOLBAR:
             if not self.toolbar.isVisible():

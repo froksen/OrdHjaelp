@@ -93,10 +93,11 @@ usynligt tekstlag oven på siderne. Siderne ser ud som før.
 ### Indstillinger
 
 Klik på **⋯** i knaplinjen (eller højreklik på det blå ikon ved uret, hvis du bruger ikoner)
-→ **Indstillinger**. Indstillingerne ligger i fire faner:
+→ **Indstillinger**. Indstillingerne ligger i fem faner:
 
 | Fane | Indhold |
 |---|---|
+| **Brug** | Læse op, diktere eller begge dele, og om beskeder fra diktering læses op eller vises på skærmen |
 | **Læs op** | Taletempo (med "Prøv stemmen"), læs ved markering, læs under musen, udklipsholderen |
 | **Skriv** | Diktering og talemodel, ordforslag, læs mens du skriver |
 | **Knapper** | Knaplinje eller ikoner ved uret, og hvilke knapper der vises |
@@ -122,11 +123,25 @@ Start **Ordhjælp** fra programmenuen.
 
 ### Første start
 
-Ved første start åbner et **velkomstvindue**, hvor man vælger, hvilke sprogmodeller der
-skal hentes – den danske stemme og den hurtige danske talegenkendelse er valgt på
-forhånd (i alt ca. 310 MB). Modellerne hentes **én gang** med statuslinje og virker
-derefter uden internet. Flere kan hentes – og ubrugte slettes – under
-*Indstillinger → Sprogmodeller …*.
+Ved første start åbner en **velkomstguide** i tre trin:
+
+1. **Hvad skal Ordhjælp hjælpe med?** *Læse op*, *Diktere* eller *Begge dele* (alle
+   funktioner). Ordhjælp viser kun de knapper, genveje og indstillinger, der hører til
+   valget. Ordforslag hører til *Begge dele*.
+2. **Indstillinger:** de vigtigste til valget, fx taletempo, læs ved markering,
+   ordforslag, knaplinje eller ikoner ved uret og start ved login. Ved diktering vælger
+   man, om beskeder som "Jeg hørte ikke noget" skal **læses op** eller **vises på
+   skærmen**.
+3. **Sprogmodeller:** kun det, valget kræver, er sat flueben ved. Med *Begge dele* er
+   det den danske stemme og den hurtige danske talegenkendelse (ca. 310 MB). Med
+   *Læse op* er det kun stemmen (63 MB). Med *Diktere* og beskeder på skærmen er det
+   kun talegenkendelsen.
+
+Modellerne hentes **én gang** med statuslinje og virker derefter uden internet. Flere
+kan altid hentes, og ubrugte slettes, under *Indstillinger → Sprogmodeller …*.
+Valget af brug kan ændres under *Indstillinger → Brug*. Det fravalgte bliver gemt og
+kommer igen, hvis man vælger det igen. Mangler der en sprogmodel til det nye valg,
+spørger Ordhjælp, om den skal hentes, når den starter igen.
 
 Derefter:
 
@@ -172,7 +187,8 @@ køres på mange computere på én gang.
 
 - Hunspell (dansk ordbog) og Tesseract (læs fra skærmen) følger med. Der skal ikke
   installeres andet.
-- Første gang hentes stemmen og talegenkendelsen (ca. 300 MB).
+- Første gang hentes de sprogmodeller, der skal bruges (højst ca. 310 MB, se
+  [Første start](#første-start)).
 - Ordhjælp er ikke signeret endnu. Windows kan derfor vise "Windows beskyttede din pc".
   Klik på **Flere oplysninger** og derefter **Kør alligevel**. Er Smart App Control slået til,
   blokerer Windows installationsprogrammet. Brug så PowerShell-kommandoen.
@@ -183,7 +199,7 @@ køres på mange computere på én gang.
 | Diktering | Teksten skrives ind tegn for tegn, så æ, ø og å virker på alle tastaturer |
 | Læs fra skærmen | Tesseract findes også, når det ikke ligger i PATH |
 | Genveje og autostart | Genvejene ændres under `[genveje]` i `%LOCALAPPDATA%\ordhjaelp\ordhjaelp\config.toml` |
-| Sprogmodeller | Velkomstvinduet henter stemme og talegenkendelse første gang. De kan hentes og slettes under indstillingerne |
+| Sprogmodeller | Velkomstguiden henter de nødvendige modeller første gang. De kan hentes og slettes under indstillingerne |
 | Ordforslag | Forslagene vises i et lille vindue ved markøren. Vælg med F1–F5, med musen eller med ↓ ↑ og Tab. Der skal ikke sættes noget op i Windows |
 | Læs mens du skriver | Ordet læses ved mellemrum og sætningen ved punktum, ! og ? |
 | Læs ved markering | Træk med musen, dobbeltklik (et ord), trippelklik (en linje) eller Shift+piletaster, så læses det markerede op |
@@ -326,6 +342,7 @@ Windows-udgaven er stadig en prøveudgave.
 - [x] Ordforslag med fonetisk matching, læs mens du skriver
 - [x] Indstillinger, autostart, RPM
 - [x] Velkomstvindue ved første start: vælg og hent sprogmodeller; administrér dem i indstillingerne
+- [x] Velkomstguide: vælg læse op, diktere eller begge dele, de vigtigste indstillinger og kun de nødvendige sprogmodeller
 - [x] Windows: læs op, diktering, læs fra skærmen, genveje, autostart (prøveudgave)
 - [x] Windows: sprogmodeller, ordforslag, læs mens du skriver (prøveudgave)
 - [x] Windows: installer uden administrator (prøveudgave)

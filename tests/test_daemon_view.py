@@ -45,3 +45,51 @@ def test_tray_view_falls_back_to_toolbar_without_tray_area(monkeypatch) -> None:
     """Kan skrivebordet ikke vise ikoner ved uret, bruges knaplinjen i stedet."""
     ok, cfg = _run(monkeypatch, VIEW_TRAY)
     assert ok and FakeTrayApp.started == 1 and cfg.view == VIEW_TOOLBAR
+
+
+# -- beskeder til eleven og stemmen ---------------------------------------------
+class _Speaker:
+    def __init__(self):
+        self.said = []
+
+    def say(self, text):
+        self.said.append(text)
+
+
+def test_messages_on_screen_when_chosen() -> None:
+    shown, speaker = [], _Speaker()
+    actions = {"besked": shown.append}
+    tell = daemon._make_tell_user(Config(messages="skaerm"), speaker, actions)
+    tell("Jeg hørte ikke noget")
+    assert shown == ["Jeg hørte ikke noget"] and speaker.said == []
+
+
+def test_messages_spoken_by_default() -> None:
+    shown, speaker = [], _Speaker()
+    tell = daemon._make_tell_user(Config(), speaker, {"besked": shown.append})
+    tell("Hej")
+    assert speaker.said == ["Hej"] and shown == []
+
+
+def test_without_voice_and_screen_messages_fall_back_to_screen() -> None:
+    # Kun diktering uden stemme: beskeden må ikke forsvinde i en stum stemme
+    cfg = Config(usage="diktering", messages="skaerm")
+    shown, speaker = [], _Speaker()
+    actions = {}
+    tell = daemon._make_tell_user(cfg, speaker, actions)
+    tell("Før brugerfladen er klar")  # logges bare
+    actions["besked"] = shown.append
+    tell("Nu")
+    assert shown == ["Nu"] and speaker.said == []
+
+
+def test_voice_is_not_loaded_when_not_needed(monkeypatch) -> None:
+    from ordhjaelp.tts.silent import SilentTTS
+
+    def no_download(*_args):
+        raise AssertionError("stemmen må ikke hentes")
+
+    monkeypatch.setattr(daemon, "ensure_voice", no_download)
+    tts = daemon._make_tts(Config(usage="diktering", messages="skaerm", speed=1.2))
+    assert isinstance(tts, SilentTTS) and tts.speed == 1.2
+    assert list(tts.synthesize("hej")) == []
