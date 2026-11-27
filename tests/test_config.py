@@ -82,7 +82,10 @@ def test_read_at_pointer_is_off_by_default_and_roundtrips() -> None:
     assert Config.from_toml("[oplaesning]\nlaes_under_musen = true\n").read_at_pointer
 
 
-def test_pdf_ocr_is_off_by_default_and_roundtrips() -> None:
-    assert Config.from_toml(DEFAULT_CONFIG).pdf_ocr_enabled is False
-    assert Config.from_toml(Config(pdf_ocr_enabled=True).to_toml()).pdf_ocr_enabled is True
-    assert Config.from_toml("[pdf]\nsoegbar = true\n").pdf_ocr_enabled
+def test_pdf_is_one_setting_and_old_menu_setting_is_ignored() -> None:
+    assert Config.from_toml(DEFAULT_CONFIG).show_icons["pdf"] is True
+    assert "[pdf]" not in DEFAULT_CONFIG and "soegbar" not in DEFAULT_CONFIG
+    # Filer fra version 0.4 og før har stadig [pdf] soegbar: den må ikke give fejl
+    old = Config.from_toml("[pdf]\nsoegbar = false\n[ikoner]\npdf = true\n")
+    assert old.show_icons["pdf"] is True
+    assert not hasattr(old, "pdf_ocr_enabled")

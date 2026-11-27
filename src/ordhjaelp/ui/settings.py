@@ -72,7 +72,6 @@ class SettingsHooks:
     models: ModelStore | None = None
     set_read_on_select: Callable[[bool], None] | None = None
     typing_setup: TypingSetup | None = None
-    set_pdf_ocr: Callable[[bool], None] | None = None
     set_view: Callable[[str], None] | None = None  # knaplinje eller ikoner ved uret
 
 
@@ -263,14 +262,11 @@ class SettingsDialog(QDialog):
         self.icon_mic.setChecked(cfg.show_icons.get("dikter", True))
         self.icon_screen = QCheckBox("Læs fra skærmen")
         self.icon_screen.setChecked(cfg.show_icons.get("skaerm", True))
-        self.icon_pdf = QCheckBox("Gør en PDF søgbar")
+        self.icon_pdf = QCheckBox("Gør en PDF søgbar (også i menuen)")
         self.icon_pdf.setChecked(cfg.show_icons.get("pdf", True))
         col.addWidget(self.icon_mic)
         col.addWidget(self.icon_screen)
         col.addWidget(self.icon_pdf)
-        self.pdf_ocr = QCheckBox('Vis også "Gør en PDF søgbar" i menuen')
-        self.pdf_ocr.setChecked(cfg.pdf_ocr_enabled)
-        col.addWidget(self.pdf_ocr)
         self._pdf_note = _note(
             "Gør en PDF søgbar laver en kopi af en scannet PDF, hvor teksten\n"
             "kan markeres og læses op. Den gamle PDF bliver ikke ændret."
@@ -345,7 +341,7 @@ class SettingsDialog(QDialog):
         self.read_sentence.setVisible(reading)
         self.typing_box.setVisible(reading or usage == USAGE_ALL)
         self.icon_mic.setVisible(dictating)
-        for widget in (self.icon_screen, self.icon_pdf, self.pdf_ocr, self._pdf_note):
+        for widget in (self.icon_screen, self.icon_pdf, self._pdf_note):
             widget.setVisible(reading)
         if hasattr(self, "_typing_row"):
             self._update_typing_status()
@@ -489,7 +485,6 @@ class SettingsDialog(QDialog):
         cfg.prediction_enabled = self.prediction.isChecked()
         cfg.read_word_on_space = self.read_word.isChecked()
         cfg.read_sentence_on_period = self.read_sentence.isChecked()
-        cfg.pdf_ocr_enabled = self.pdf_ocr.isChecked()
         cfg.show_icons["dikter"] = self.icon_mic.isChecked()
         cfg.show_icons["skaerm"] = self.icon_screen.isChecked()
         cfg.show_icons["pdf"] = self.icon_pdf.isChecked()
@@ -503,8 +498,6 @@ class SettingsDialog(QDialog):
         hooks.set_clipboard_fallback(new.use_clipboard_fallback)
         if hooks.set_read_on_select is not None:
             hooks.set_read_on_select(new.read_on_select_active)
-        if hooks.set_pdf_ocr is not None:
-            hooks.set_pdf_ocr(new.pdf_ocr_enabled)  # skjules af knaplinjen ved kun diktering
         hooks.config.view = new.view  # set_icon_visible ser på den valgte visning
         if hooks.set_view is not None and new.view != self._original.view:
             hooks.set_view(new.view)

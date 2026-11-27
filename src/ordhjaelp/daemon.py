@@ -104,7 +104,7 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
         if cmd == "skaerm":
             action = ui_actions.get("skaerm")
             if action is None:
-                return {"ok": False, "fejl": "Læs fra skærmen kræver ikonet ved uret"}
+                return {"ok": False, "fejl": "Læs fra skærmen kræver knaplinjen eller ikonerne"}
             action()
             return {"ok": True}
         if cmd == "skriv":  # til fejlfinding: skriv tekst ind i det aktive program
@@ -147,7 +147,7 @@ def run(cfg: Config, hotkeys: bool = True, tray: bool = True) -> None:
         except Exception as exc:  # noqa: BLE001 - genveje er valgfrie
             log.warning(
                 "Globale genveje kunne ikke aktiveres (%s). "
-                "Brug ikonet ved uret, eller 'ordhjaelp laes' som genvej.",
+                "Brug knapperne, eller 'ordhjaelp laes' som genvej.",
                 exc,
             )
 
@@ -392,7 +392,7 @@ def _run_tray(
     try:
         from ordhjaelp.ui.tray import TrayApp
     except ImportError as exc:
-        log.warning("Ikon ved uret er ikke tilgængeligt (%s)", exc)
+        log.warning("Knapperne er ikke tilgængelige (%s)", exc)
         return False
     from ordhjaelp.config import VIEW_TOOLBAR, VIEW_TRAY
 
@@ -418,7 +418,7 @@ def _request_shutdown() -> None:
 
 
 def _wait_for_signal() -> None:
-    log.info("Ordhjælp kører uden ikon. Markér tekst og brug genvejen.")
+    log.info("Ordhjælp kører uden knapper. Markér tekst og brug genvejen.")
     done = threading.Event()
     signal.signal(signal.SIGINT, lambda *_: done.set())
     signal.signal(signal.SIGTERM, lambda *_: done.set())

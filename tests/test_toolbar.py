@@ -265,9 +265,11 @@ def test_pdf_button_is_shown_by_default_and_opens_pdf_ocr(app, monkeypatch) -> N
 def test_pdf_button_can_be_hidden_and_shown_in_tray_view(app) -> None:
     tray, *_ = make_tray(VIEW_TRAY)
     assert tray.pdf_icon.isVisible()
+    assert tray._act_pdf.isVisible()  # menupunktet følger knappen
     tray.set_icon_visible("pdf", False)
     assert not tray.pdf_icon.isVisible()
     assert tray.toolbar.buttons["pdf"].isHidden()
+    assert not tray._act_pdf.isVisible()
 
 
 def test_fold_and_unfold_resizes_the_window_itself(app) -> None:
@@ -297,8 +299,9 @@ def test_dictation_only_shows_just_the_microphone(app) -> None:
     assert _shown(tray, "dikter")
     assert not any(_shown(tray, n) for n in ("laes", "skaerm", "pdf"))
     assert not tray._act_read.isVisible() and not tray._act_stop.isVisible()
+    assert not tray._act_pdf.isVisible()  # heller ikke i menuen
     tray.set_icon_visible("pdf", True)  # fx fra indstillingerne: hører ikke til brugen
-    assert not _shown(tray, "pdf")
+    assert not _shown(tray, "pdf") and not tray._act_pdf.isVisible()
     tray.set_view(VIEW_TRAY)
     assert tray.mic.isVisible() and not tray.screen_icon.isVisible()
     assert not tray.pdf_icon.isVisible()

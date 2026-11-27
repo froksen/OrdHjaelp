@@ -118,17 +118,16 @@ def test_read_at_pointer_checkbox_saves(app, hooks) -> None:
     assert calls["restart"] == 1  # genvejene registreres ved start
 
 
-def test_pdf_ocr_applies_live(app, hooks) -> None:
+def test_pdf_is_one_checkbox_and_applies_live(app, hooks) -> None:
     h, calls, tmp = hooks
-    seen: list[bool] = []
-    h.set_pdf_ocr = seen.append
     d = SettingsDialog(h)
-    assert d.pdf_ocr.isChecked() is False  # slået fra som standard
-    d.pdf_ocr.setChecked(True)
+    assert not hasattr(d, "pdf_ocr")  # ikke længere et ekstra flueben til menuen
+    assert d.icon_pdf.isChecked()  # vist som standard
+    d.icon_pdf.setChecked(False)
     d.accept()
-    assert seen == [True]  # menupunktet vises med det samme
+    assert ("pdf", False) in calls["icons"]  # skjules med det samme
     assert calls["restart"] == 0
-    assert Config.from_toml((tmp / "config.toml").read_text()).pdf_ocr_enabled is True
+    assert Config.from_toml((tmp / "config.toml").read_text()).show_icons["pdf"] is False
 
 
 class _ReadySetup:
@@ -159,7 +158,7 @@ def test_settings_are_split_into_tabs(app, hooks) -> None:
     assert tab_of(d.usage_buttons["alt"]) == tab_of(d.messages_screen) == 0
     assert tab_of(d.speed) == tab_of(d.read_at_pointer) == 1
     assert tab_of(d.dictation) == tab_of(d.prediction) == 2
-    assert tab_of(d.view_toolbar) == tab_of(d.icon_pdf) == tab_of(d.pdf_ocr) == 3
+    assert tab_of(d.view_toolbar) == tab_of(d.icon_pdf) == 3
     assert tab_of(d.autostart) == 4
 
 

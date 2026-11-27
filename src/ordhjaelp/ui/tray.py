@@ -112,11 +112,11 @@ class TrayApp:
         self._act_read.setVisible(self._reading)
         self._act_stop.setVisible(self._reading)
         menu.addSeparator()
-        # Slået fra som standard – slås til i indstillingerne
+        # Følger PDF-knappen: vises begge eller ingen af dem
         self._act_pdf = QAction("Gør en PDF søgbar …", menu)
         self._act_pdf.triggered.connect(self.open_pdf_ocr)
         self._act_pdf.setVisible(
-            bool(settings and settings.config.pdf_ocr_enabled) and self._reading
+            (settings is None or settings.config.show_icons.get("pdf", True)) and self._reading
         )
         menu.addAction(self._act_pdf)
         self._pdf_jobs: list = []  # behold referencer, mens de kører
@@ -135,7 +135,6 @@ class TrayApp:
         if settings is not None:
             settings.set_icon_visible = self.set_icon_visible
             settings.set_view = self.set_view
-            settings.set_pdf_ocr = lambda on: self._act_pdf.setVisible(on and self._reading)
             act_settings = QAction("Indstillinger …", menu)
             act_settings.triggered.connect(self.open_settings)
             menu.addAction(act_settings)
@@ -367,6 +366,8 @@ class TrayApp:
         if self._settings is not None:
             self._settings.config.show_icons[name] = visible
         visible = visible and self._allowed(name)
+        if name == "pdf":
+            self._act_pdf.setVisible(visible)
         icon = {"dikter": self.mic, "skaerm": self.screen_icon, "pdf": self.pdf_icon}.get(name)
         if icon is not None:
             icon.setVisible(visible and self._view == VIEW_TRAY)
