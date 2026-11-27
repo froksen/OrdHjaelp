@@ -36,6 +36,7 @@ from PySide6.QtWidgets import (
 )
 
 from ordhjaelp.config import (
+    KEYBOARD_PRIVACY_NOTE,
     MESSAGES_SCREEN,
     MESSAGES_SPEAK,
     USAGE_ALL,
@@ -209,11 +210,13 @@ class FirstRunDialog(QDialog):
         self.read_word.setChecked(cfg.read_word_on_space)
         self.read_sentence = QCheckBox("Læs sætningen op ved punktum, ! og ?")
         self.read_sentence.setChecked(cfg.read_sentence_on_period)
+        self.read_typing_note = _note(KEYBOARD_PRIVACY_NOTE)
         for widget in (
             self.read_on_select,
             self.read_at_pointer,
             self.read_word,
             self.read_sentence,
+            self.read_typing_note,
         ):
             box.addWidget(widget)
         col.addWidget(self.reading_box)
@@ -242,6 +245,7 @@ class FirstRunDialog(QDialog):
         self.prediction = QCheckBox("Vis ordforslag, mens der skrives")
         self.prediction.setChecked(cfg.prediction_enabled)
         box.addWidget(self.prediction)
+        box.addWidget(_note(KEYBOARD_PRIVACY_NOTE))
         col.addWidget(self.writing_box)
 
         # Knapper og start

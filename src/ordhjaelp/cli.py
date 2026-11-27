@@ -9,6 +9,11 @@ import sys
 from ordhjaelp import ipc
 from ordhjaelp.config import config_path, load_config, voices_dir
 
+STORE_INSTALL_HELP = (
+    "Ordhjælp er installeret fra Microsoft Store. Start ved login slås til i Ordhjælps\n"
+    "indstillinger, og Ordhjælp afinstalleres under Indstillinger → Apps i Windows."
+)
+
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="ordhjaelp", description="Dansk læse- og skrivehjælp")
@@ -67,6 +72,13 @@ def main(argv: list[str] | None = None) -> int:
 
         print(ensure_voice(cfg.voice, voices_dir()))
         return 0
+
+    if args.cmd in ("installer", "afinstaller"):
+        from ordhjaelp.platform import is_store_app
+
+        if is_store_app():  # Windows og Microsoft Store installerer og afinstallerer
+            print(STORE_INSTALL_HELP, file=sys.stderr)
+            return 1
 
     if args.cmd in ("installer", "afinstaller") and sys.platform == "win32":
         from ordhjaelp.platform.windows.install import WindowsAutostart

@@ -342,6 +342,7 @@ Windows-udgaven er stadig en prøveudgave.
 - [x] Ordforslag med fonetisk matching, læs mens du skriver
 - [x] Indstillinger, autostart, RPM
 - [x] Velkomstvindue ved første start: vælg og hent sprogmodeller; administrér dem i indstillingerne
+- [ ] Microsoft Store: MSIX-pakken bygges og afprøves i CI. Navnet er ikke reserveret endnu (se [packaging/windows/store](packaging/windows/store/README.md))
 - [x] Velkomstguide: vælg læse op, diktere eller begge dele, de vigtigste indstillinger og kun de nødvendige sprogmodeller
 - [x] Windows: læs op, diktering, læs fra skærmen, genveje, autostart (prøveudgave)
 - [x] Windows: sprogmodeller, ordforslag, læs mens du skriver (prøveudgave)
@@ -369,7 +370,8 @@ Programmet henter kun noget fra internettet, når brugeren beder om det eller f�
 
 Der er ingen statistik, sporing eller automatisk opdatering. Indstillinger og sprogmodeller
 ligger kun på computeren (`%LOCALAPPDATA%\ordhjaelp` på Windows, `~/.config/ordhjaelp` og
-`~/.local/share/ordhjaelp` på Linux).
+`~/.local/share/ordhjaelp` på Linux). Loggen gemmer ikke elevens tekst (kun med `-v` til
+fejlfinding). Se også [privatlivspolitikken](PRIVATLIV.md).
 
 ## Licens
 

@@ -19,6 +19,8 @@ dependencies = [
     "rapidfuzz>=3.14.6",
     "sounddevice>=0.5.6",
     "wordfreq>=3.1.1",
+    # Start ved login i MSIX-pakken (Microsoft Store): kun Windows
+    "winrt-Windows.ApplicationModel>=4!10.0.26100; sys_platform == 'win32'",
 ]
 
 [project.scripts]

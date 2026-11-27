@@ -94,6 +94,8 @@ class PointerReadService:
         if not text or not text.strip():
             self._say(MSG_NOTHING)
             return False
-        log.info("Under musen (%s): %r", unit, text[:200])
+        # Selve teksten kun ved fejlfinding (-v): loggen må ikke gemme elevens tekst
+        log.info("Under musen (%s): %d tegn", unit, len(text))
+        log.debug("Under musen (%s): %r", unit, text[:200])
         self._say(text)
         return True

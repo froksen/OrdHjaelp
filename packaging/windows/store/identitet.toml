@@ -1,0 +1,18 @@
+# Pakkens identitet i Microsoft Store.
+#
+# Værdierne her er PLADSHOLDERE til at bygge og afprøve MSIX-pakken. Når navnet er
+# reserveret i Partner Center, står de rigtige værdier under
+# Produkt → Produktstyring → Produktidentitet. Skriv dem ind her:
+#
+#   navn           = "Package/Identity/Name"            fx "12345OleFrandsen.Ordhjaelp"
+#   udgiver        = "Package/Identity/Publisher"       fx "CN=1A2B3C4D-…"
+#   udgiver_visning = "Package/Properties/PublisherDisplayName"
+#
+# visningsnavn er det navn, eleven ser i Store og i startmenuen. Det skal være det
+# navn, der er reserveret i Partner Center (hvis programmet omdøbes, ændres det her).
+
+navn = "OrdhjaelpTest"
+udgiver = "CN=Ordhjaelp Test"
+udgiver_visning = "Ole Frandsen"
+visningsnavn = "Ordhjælp"
+beskrivelse = "Dansk læse- og skrivehjælp: læser tekst op, skriver det, du siger, og giver ordforslag."

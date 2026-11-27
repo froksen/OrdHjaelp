@@ -19,6 +19,8 @@ ROOT = HERE.parent.parent
 hiddenimports = collect_submodules(
     "ordhjaelp", filter=lambda name: not name.startswith("ordhjaelp.platform.linux")
 )
+# Start ved login i MSIX-pakken (platform/windows/store.py) importerer WinRT først ved brug
+hiddenimports += collect_submodules("winrt")
 
 datas = []
 datas += collect_data_files("ordhjaelp", excludes=["platform/linux/**"])  # ikonerne
@@ -39,6 +41,7 @@ datas += copy_metadata("ordhjaelp")
 
 binaries = []
 binaries += collect_dynamic_libs("ctranslate2")  # talegenkendelse
+binaries += collect_dynamic_libs("winrt")  # WinRT-kernen (_winrt) til MSIX-pakken
 # Søgbare PDF'er: pdfium.dll og versionsfilerne, som pypdfium2 læser ved import
 binaries += collect_dynamic_libs("pypdfium2_raw")
 datas += collect_data_files("pypdfium2_raw") + collect_data_files("pypdfium2")

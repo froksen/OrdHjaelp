@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  MSIX-pakken til Microsoft Store. Udfyldes af make_msix.py ud fra identitet.toml.
+  @NAVN@ m.fl. erstattes, når pakken bygges (build-msix.ps1).
+
+  * runFullTrust: Ordhjælp er et almindeligt Windows-program (Python og Qt), ikke en UWP-app.
+  * microphone: diktering.
+  * StartupTask: start ved login (TaskId skal passe med STARTUP_TASK_ID i
+    src/ordhjaelp/platform/windows/store.py). Slået fra, til eleven slår det til.
+  * AppExecutionAlias: "ordhjaelp" virker i en terminal, fx "ordhjaelp laes".
+-->
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:uap5="http://schemas.microsoft.com/appx/manifest/uap/windows10/5"
+  xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap uap5 desktop rescap">
+
+  <Identity Name="@NAVN@" Publisher="@UDGIVER@" Version="@VERSION@" ProcessorArchitecture="x64" />
+
+  <Properties>
+    <DisplayName>@VISNINGSNAVN@</DisplayName>
+    <PublisherDisplayName>@UDGIVER_VISNING@</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
+    <Description>@BESKRIVELSE@</Description>
+  </Properties>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.19041.0" MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="da-DK" />
+  </Resources>
+
+  <Applications>
+    <Application Id="Ordhjaelp" Executable="Ordhjaelp.exe" EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements
+        DisplayName="@VISNINGSNAVN@"
+        Description="@BESKRIVELSE@"
+        BackgroundColor="transparent"
+        Square150x150Logo="Assets\Square150x150Logo.png"
+        Square44x44Logo="Assets\Square44x44Logo.png" />
+      <Extensions>
+        <desktop:Extension Category="windows.startupTask" Executable="Ordhjaelp.exe" EntryPoint="Windows.FullTrustApplication">
+          <desktop:StartupTask TaskId="@STARTUP_TASK_ID@" Enabled="false" DisplayName="@VISNINGSNAVN@" />
+        </desktop:Extension>
+        <uap5:Extension Category="windows.appExecutionAlias" Executable="Ordhjaelp.exe" EntryPoint="Windows.FullTrustApplication">
+          <uap5:AppExecutionAlias>
+            <uap5:ExecutionAlias Alias="ordhjaelp.exe" />
+          </uap5:AppExecutionAlias>
+        </uap5:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />
+    <DeviceCapability Name="microphone" />
+  </Capabilities>
+</Package>
