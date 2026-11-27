@@ -131,7 +131,9 @@ class DictationService:
                 log.info("Optagelsen var for kort")
                 return
             text = self._transcriber.transcribe(audio).strip()
-            log.info("Dikteret: %r", text)
+            # Selve teksten kun ved fejlfinding (-v): loggen må ikke gemme elevens tekst
+            log.info("Dikteret %d tegn", len(text))
+            log.debug("Dikteret: %r", text)
             if not text:
                 self._say(MSG_NOTHING_HEARD)
                 return

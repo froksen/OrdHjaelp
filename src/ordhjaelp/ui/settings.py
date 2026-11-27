@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
 )
 
 from ordhjaelp.config import (
+    KEYBOARD_PRIVACY_NOTE,
     MESSAGES_SCREEN,
     MESSAGES_SPEAK,
     USAGE_ALL,
@@ -227,6 +228,7 @@ class SettingsDialog(QDialog):
         self.read_sentence = QCheckBox("Læs sætningen op ved punktum, ! og ?")
         self.read_sentence.setChecked(cfg.read_sentence_on_period)
         col.addWidget(self.read_sentence)
+        col.addWidget(_note(KEYBOARD_PRIVACY_NOTE))
         self._add_typing_status(col)
         layout.addWidget(box)
 

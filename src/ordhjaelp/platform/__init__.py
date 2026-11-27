@@ -78,12 +78,25 @@ def get_pointer_text() -> PointerText:
     raise PlatformNotSupported(f"Læs under musen understøttes endnu ikke på {sys.platform}")
 
 
+def is_store_app() -> bool:
+    """Kører Ordhjælp fra en MSIX-pakke (Microsoft Store)? Altid nej uden for Windows."""
+    if sys.platform != "win32":
+        return False
+    from ordhjaelp.platform.windows.store import is_packaged
+
+    return is_packaged()
+
+
 def get_autostart() -> Autostart:
     if sys.platform.startswith("linux"):
         from ordhjaelp.platform.linux.install import LinuxAutostart
 
         return LinuxAutostart()
     if sys.platform == "win32":
+        if is_store_app():  # MSIX-pakken: start ved login er en StartupTask i manifestet
+            from ordhjaelp.platform.windows.store import StoreAutostart
+
+            return StoreAutostart()
         from ordhjaelp.platform.windows.install import WindowsAutostart
 
         return WindowsAutostart()

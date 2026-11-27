@@ -63,6 +63,8 @@ class ScreenReadService:
             log.exception("Tekstgenkendelse fejlede")
             self._say(MSG_ERROR)
             return ""
-        log.info("Fundet på skærmen: %r", text[:200])
+        # Selve teksten kun ved fejlfinding (-v): loggen må ikke gemme elevens tekst
+        log.info("Fundet %d tegn på skærmen", len(text))
+        log.debug("Fundet på skærmen: %r", text[:200])
         self._say(text or MSG_NO_TEXT)
         return text

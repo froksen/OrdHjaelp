@@ -270,11 +270,32 @@ def config_path() -> Path:
     return config_dir() / "config.toml"
 
 
+# Til fluebenene, der lytter til tastaturet. Ordforslag og læs mens du skriver ser
+# alle tastetryk i alle programmer (IBus på Linux, en tastaturovervågning på Windows).
+KEYBOARD_PRIVACY_NOTE = (
+    "Lytter til tastaturet i alle programmer for at se, hvad der skrives.\n"
+    "Intet sendes nogen steder hen. Kun ord, du bruger, huskes på computeren."
+)
+
+
+def default_config(store_app: bool | None = None) -> Config:
+    """Indstillingerne første gang.
+
+    Fra Microsoft Store er ordforslag slået fra, til eleven selv slår det til: det lytter
+    til alle tastetryk, og det skal være et bevidst valg (se packaging/windows/store/).
+    """
+    if store_app is None:
+        from ordhjaelp.platform import is_store_app
+
+        store_app = is_store_app()
+    return Config(prediction_enabled=not store_app)
+
+
 def load_config() -> Config:
     """Indlæs indstillinger. Første gang skrives en standardfil."""
     path = config_path()
     if not path.exists():
-        save_config(Config())
+        save_config(default_config())
     return Config.from_toml(path.read_text(encoding="utf-8"))
 
 
