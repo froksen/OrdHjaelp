@@ -12,6 +12,10 @@ import threading
 from collections.abc import Callable
 from importlib.resources import as_file, files
 
+# Indlæser Qt6Svg.dll, før Qt skal tegne ikonerne (SVG). I en MSIX-pakke leder Windows
+# ikke efter DLL'er i PATH, så Qt's SVG-modul kunne ellers ikke finde Qt6Svg.dll, og
+# knapperne blev tomme. Importen får også PyInstaller til at tage QtSvg med.
+import PySide6.QtSvg  # noqa: F401
 from PySide6.QtCore import QObject, QTimer, Signal
 from PySide6.QtGui import QAction, QIcon
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
