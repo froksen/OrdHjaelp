@@ -1,0 +1,30 @@
+name: Jeg har en idé
+description: Foreslå noget nyt eller noget, der kan gøres bedre
+title: "Ønske: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Tak for din idé.
+        Skriv ikke navne eller andre personlige oplysninger. Alt her kan ses af alle.
+  - type: textarea
+    id: ide
+    attributes:
+      label: Hvad er din idé?
+    validations:
+      required: true
+  - type: textarea
+    id: hvorfor
+    attributes:
+      label: Hvordan ville det hjælpe dig eller eleven?
+    validations:
+      required: false
+  - type: textarea
+    id: teknisk
+    attributes:
+      label: Tekniske oplysninger
+      description: Ordhjælp har udfyldt dette. Du behøver ikke ændre noget.
+      render: text
+    validations:
+      required: false

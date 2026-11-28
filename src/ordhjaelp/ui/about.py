@@ -7,6 +7,7 @@ PROJECTS. Æren skal gå til dem, så listen skal holdes opdateret, når der kom
 from __future__ import annotations
 
 import html
+from collections.abc import Callable
 from dataclasses import dataclass
 from importlib.metadata import PackageNotFoundError, version
 
@@ -17,9 +18,13 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QHBoxLayout,
     QLabel,
+    QPushButton,
     QTextBrowser,
     QVBoxLayout,
 )
+
+from ordhjaelp.config import Config
+from ordhjaelp.ui.feedback import MENU_TITLE, feedback_menu
 
 HOMEPAGE = "https://github.com/froksen/OrdHjaelp"
 LICENSE_NAME = "GPL-3.0-or-later"
@@ -270,7 +275,12 @@ def credits_html() -> str:
 
 
 class AboutDialog(QDialog):
-    def __init__(self, icon: QIcon | None = None, parent=None) -> None:  # noqa: ANN001
+    def __init__(
+        self,
+        icon: QIcon | None = None,
+        parent=None,  # noqa: ANN001
+        get_config: Callable[[], Config | None] = lambda: None,
+    ) -> None:
         super().__init__(parent)
         self.setWindowTitle("Om Ordhjælp")
 
@@ -298,6 +308,9 @@ class AboutDialog(QDialog):
 
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         buttons.button(QDialogButtonBox.StandardButton.Close).setText("Luk")
+        self.feedback = QPushButton(f"{MENU_TITLE} …")
+        self.feedback.setMenu(feedback_menu(self, get_config))
+        buttons.addButton(self.feedback, QDialogButtonBox.ButtonRole.ActionRole)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
         self.resize(560, 520)
