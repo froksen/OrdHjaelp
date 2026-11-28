@@ -25,6 +25,7 @@ from ordhjaelp.config import APP_ID, VIEW_TOOLBAR, VIEW_TRAY
 from ordhjaelp.services.dictation import DictationService, DictationState
 from ordhjaelp.services.read_aloud import ReadAloudService
 from ordhjaelp.services.screen_read import ScreenReadService
+from ordhjaelp.ui.feedback import feedback_menu
 
 log = logging.getLogger(__name__)
 
@@ -142,6 +143,8 @@ class TrayApp:
             act_settings = QAction("Indstillinger …", menu)
             act_settings.triggered.connect(self.open_settings)
             menu.addAction(act_settings)
+        self._feedback_menu = feedback_menu(None, self._current_config)
+        menu.addMenu(self._feedback_menu)
         self._about_dialog = None
         self._act_about = QAction("Om Ordhjælp …", menu)
         self._act_about.triggered.connect(self.open_about)
@@ -340,11 +343,14 @@ class TrayApp:
         self._shortcuts_dialog.raise_()
         self._shortcuts_dialog.activateWindow()
 
+    def _current_config(self) -> config.Config | None:
+        return self._settings.config if self._settings is not None else None
+
     def open_about(self) -> None:
         from ordhjaelp.ui.about import AboutDialog
 
         if self._about_dialog is None:
-            self._about_dialog = AboutDialog(self._icon_idle)
+            self._about_dialog = AboutDialog(self._icon_idle, get_config=self._current_config)
             self._about_dialog.setWindowIcon(self._icon_idle)
         self._about_dialog.show()
         self._about_dialog.raise_()
